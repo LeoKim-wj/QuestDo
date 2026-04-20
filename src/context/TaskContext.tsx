@@ -1,3 +1,10 @@
 import { createContext } from "react";
+import { Task } from "../types/task";
 
-export const TaskContext = createContext(null);
+type TaskContextType = {
+  tasks: Task[];
+  addTask: (task: Task) => void;
+  deleteTask: (id: string) => void;
+};
+
+export const TaskContext = createContext<TaskContextType | null>(null);
