@@ -2,6 +2,13 @@ import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 
+
+//helper fucntion to disaply date in  NZ date format
+const formatDateNZ = (dateString: string) => {
+  const [year, month, day] = dateString.split("-");
+  return `${day}/${month}/${year}`;
+};
+
 type Task = {
   id: string;
   title: string;
@@ -95,7 +102,9 @@ export default function CalendarScreen() {
         renderItem={({ item }) => (
           <View style={styles.taskCard}>
             <Text style={styles.taskTitle}>⚔️ {item.title}</Text>
-            <Text style={styles.taskDate}>Due: {item.dueDate}</Text>
+
+            // changed to NZ date 
+            <Text style={styles.taskDate}>Due: {formatDateNZ(item.dueDate)}</Text>
           </View>
         )}
         ListEmptyComponent={
