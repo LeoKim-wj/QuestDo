@@ -1,6 +1,10 @@
 import React from "react";
-import CalendarScreen from "./CalendarScreen";
+import { View, Text } from "react-native";
 
 export default function HomeScreen() {
-  return <CalendarScreen />;
+  return (
+    <View>
+      <Text>Home Screen</Text>
+    </View>
+  );
 }
