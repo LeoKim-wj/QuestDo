@@ -2,8 +2,6 @@ import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
 
-
-//helper fucntion to disaply date in  NZ date format
 const formatDateNZ = (dateString: string) => {
   const [year, month, day] = dateString.split("-");
   return `${day}/${month}/${year}`;
@@ -21,9 +19,24 @@ export default function CalendarScreen() {
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
 
   const tasks: Task[] = [
-    { id: "1", title: "Finish calendar screen", dueDate: "2026-04-26", completed: false },
-    { id: "2", title: "Team meeting", dueDate: "2026-04-27", completed: false },
-    { id: "3", title: "Submit COMP602 work", dueDate: "2026-05-01", completed: false },
+    {
+      id: "1",
+      title: "Finish calendar screen",
+      dueDate: "2026-04-26",
+      completed: false,
+    },
+    {
+      id: "2",
+      title: "Team meeting",
+      dueDate: "2026-04-27",
+      completed: false,
+    },
+    {
+      id: "3",
+      title: "Submit COMP602 work",
+      dueDate: "2026-05-01",
+      completed: false,
+    },
   ];
 
   const isSameWeek = (taskDate: string, selected: string) => {
@@ -92,9 +105,7 @@ export default function CalendarScreen() {
         markedDates={markedDates}
       />
 
-      <Text style={styles.subtitle}>
-        {viewMode.toUpperCase()} tasks
-      </Text>
+      <Text style={styles.subtitle}>{viewMode.toUpperCase()} Tasks</Text>
 
       <FlatList
         data={filteredTasks}
@@ -102,8 +113,6 @@ export default function CalendarScreen() {
         renderItem={({ item }) => (
           <View style={styles.taskCard}>
             <Text style={styles.taskTitle}>⚔️ {item.title}</Text>
-
-            // changed to NZ date 
             <Text style={styles.taskDate}>Due: {formatDateNZ(item.dueDate)}</Text>
           </View>
         )}
