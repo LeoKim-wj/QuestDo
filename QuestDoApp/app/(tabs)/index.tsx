@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
+import { scheduleTaskReminder } from "../../src/services/NotificationService";
+import { requestNotificationPermissions } from "../../src/services/NotificationService";
 
 export default function HomeScreen() {
   const currentDate = new Date().toLocaleDateString("en-NZ", {
@@ -28,6 +30,17 @@ export default function HomeScreen() {
   const overdueTasks = [
     { id: "5", title: "Upload UML diagram", due: "Yesterday" },
   ];
+
+  useEffect(() => {
+  const scheduleReminders = async () => {
+  await requestNotificationPermissions();
+  const incompleteTasks = [...todaysTasks, ...overdueTasks];
+  for (const task of incompleteTasks) {
+    await scheduleTaskReminder({ id: task.id, title: task.title, completed: false });
+  }
+};
+  scheduleReminders();
+}, []);
 
   return (
     <ScrollView style={styles.container}>
