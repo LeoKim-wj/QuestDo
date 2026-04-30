@@ -1,34 +1,24 @@
 import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
 import { Calendar } from "react-native-calendars";
+import { useTasks } from "../context/TaskContext";
+import { Task } from "../types/task";
 
+const getDateKey = (dateString: string) => dateString.slice(0, 10);
 
-//helper fucntion to disaply date in  NZ date format
 const formatDateNZ = (dateString: string) => {
-  const [year, month, day] = dateString.split("-");
+  const [year, month, day] = getDateKey(dateString).split("-");
   return `${day}/${month}/${year}`;
 };
 
-type Task = {
-  id: string;
-  title: string;
-  dueDate: string;
-  completed: boolean;
-};
-
 export default function CalendarScreen() {
-  const [selectedDate, setSelectedDate] = useState("2026-04-26");
+  const { tasks } = useTasks();
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
 
-  const tasks: Task[] = [
-    { id: "1", title: "Finish calendar screen", dueDate: "2026-04-26", completed: false },
-    { id: "2", title: "Team meeting", dueDate: "2026-04-27", completed: false },
-    { id: "3", title: "Submit COMP602 work", dueDate: "2026-05-01", completed: false },
-  ];
-
   const isSameWeek = (taskDate: string, selected: string) => {
-    const task = new Date(taskDate);
-    const chosen = new Date(selected);
+    const task = new Date(`${getDateKey(taskDate)}T00:00:00`);
+    const chosen = new Date(`${selected}T00:00:00`);
 
     const startOfWeek = new Date(chosen);
     startOfWeek.setDate(chosen.getDate() - chosen.getDay());
@@ -40,8 +30,10 @@ export default function CalendarScreen() {
   };
 
   const filteredTasks = tasks.filter((task) => {
+    const taskDate = getDateKey(task.dueDate);
+
     if (viewMode === "day") {
-      return task.dueDate === selectedDate;
+      return taskDate === selectedDate;
     }
 
     if (viewMode === "week") {
@@ -49,17 +41,20 @@ export default function CalendarScreen() {
     }
 
     if (viewMode === "month") {
-      return task.dueDate.startsWith(selectedDate.slice(0, 7));
+      return taskDate.startsWith(selectedDate.slice(0, 7));
     }
 
     return true;
   });
 
-  const markedDates = tasks.reduce((marks: any, task) => {
-    marks[task.dueDate] = {
+  const markedDates = tasks.reduce<Record<string, any>>((marks, task) => {
+    const taskDate = getDateKey(task.dueDate);
+
+    marks[taskDate] = {
       marked: true,
       dotColor: "purple",
     };
+
     return marks;
   }, {});
 
@@ -68,6 +63,17 @@ export default function CalendarScreen() {
     selected: true,
     selectedColor: "purple",
   };
+
+  const renderTask = ({ item }: { item: Task }) => (
+    <View style={styles.taskCard}>
+      <Text style={styles.taskTitle}>{item.title}</Text>
+      <Text style={styles.taskDate}>Due: {formatDateNZ(item.dueDate)}</Text>
+      <Text style={styles.taskDate}>Category: {item.category}</Text>
+      {item.description ? (
+        <Text style={styles.taskDate}>{item.description}</Text>
+      ) : null}
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -92,21 +98,12 @@ export default function CalendarScreen() {
         markedDates={markedDates}
       />
 
-      <Text style={styles.subtitle}>
-        {viewMode.toUpperCase()} tasks
-      </Text>
+      <Text style={styles.subtitle}>{viewMode.toUpperCase()} Tasks</Text>
 
       <FlatList
         data={filteredTasks}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.taskCard}>
-            <Text style={styles.taskTitle}>⚔️ {item.title}</Text>
-
-            // changed to NZ date 
-            <Text style={styles.taskDate}>Due: {formatDateNZ(item.dueDate)}</Text>
-          </View>
-        )}
+        renderItem={renderTask}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No quests due for this view.</Text>
         }
