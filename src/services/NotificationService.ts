@@ -39,13 +39,14 @@ async function getNotifications() {
   return notificationsModule;
 }
 
-function getNotificationDate(dueDate: string) {
+function getReminderDate(dueDate: string) {
   const date = new Date(dueDate);
 
   if (Number.isNaN(date.getTime())) {
     return null;
   }
 
+  date.setDate(date.getDate() - 1);
   date.setHours(9, 0, 0, 0);
 
   if (date.getTime() <= Date.now()) {
@@ -70,7 +71,7 @@ async function ensureNotificationChannel(notifications: NotificationsModule) {
 
 export async function scheduleTaskNotification(task: Task) {
   const notifications = await getNotifications();
-  const notificationDate = getNotificationDate(task.dueDate);
+  const notificationDate = getReminderDate(task.dueDate);
 
   if (!notifications || !notificationDate) {
     return null;
@@ -91,7 +92,7 @@ export async function scheduleTaskNotification(task: Task) {
   return notifications.scheduleNotificationAsync({
     content: {
       title: `QuestDo: ${task.title}`,
-      body: `${task.category} task is due today.`,
+      body: `${task.category} task is due on ${new Date(task.dueDate).toLocaleDateString()}.`,
       data: { taskId: task.id },
       sound: true,
     },
