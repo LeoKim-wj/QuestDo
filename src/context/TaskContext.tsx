@@ -132,7 +132,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const totalPoints = tasks.filter((task) => task.completed).length * 10;
+  const totalPoints = tasks.filter((task) => task.completed).length * 5;
 
   return (
     <TaskContext.Provider
