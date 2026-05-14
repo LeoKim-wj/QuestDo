@@ -8,5 +8,6 @@ export type Task = {
   completed: boolean;
   priority: TaskPriority;
   dueDate: string;
+  createdDate: string;
   notificationId?: string | null;
 };

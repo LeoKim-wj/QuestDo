@@ -1,14 +1,22 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import {
+  deleteTaskRecord,
+  getTasks,
+  initializeDatabase,
+  insertTask,
+  setTaskCompleted,
+  updateTaskRecord,
+} from "../database/database";
 import { Task } from "../types/task";
 
 type TaskContextType = {
   tasks: Task[];
   categories: string[];
-  addTask: (task: Task) => void;
+  addTask: (task: Task) => Promise<void>;
   addCategory: (category: string) => void;
-  deleteTask: (id: string) => void;
-  updateTask: (id: string, updatedFields: Partial<Task>) => void;
-  toggleTaskCompleted: (id: string) => void;
+  deleteTask: (id: string) => Promise<void>;
+  updateTask: (id: string, updatedFields: Partial<Task>) => Promise<void>;
+  toggleTaskCompleted: (id: string) => Promise<void>;
 };
 
 const TaskContext = createContext<TaskContextType | null>(null);
@@ -18,9 +26,47 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
 
-  const addTask = (task: Task) => {
-    setTasks((prev) => [...prev, task]);
-    addCategory(task.category);
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadTasks = async () => {
+      try {
+        await initializeDatabase();
+        const storedTasks = await getTasks();
+
+        if (!isMounted) {
+          return;
+        }
+
+        setTasks(storedTasks);
+        setCategories((prev) => mergeCategories(prev, storedTasks));
+      } catch (error) {
+        console.error("Failed to initialize task database", error);
+      }
+    };
+
+    loadTasks();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const addTask = async (task: Task) => {
+    const taskWithCreatedDate = {
+      ...task,
+      createdDate: task.createdDate ?? new Date().toISOString(),
+    };
+
+    setTasks((prev) => [...prev, taskWithCreatedDate]);
+    addCategory(taskWithCreatedDate.category);
+
+    try {
+      await initializeDatabase();
+      await insertTask(taskWithCreatedDate);
+    } catch (error) {
+      console.error("Failed to save task", error);
+    }
   };
 
   const addCategory = (category: string) => {
@@ -37,24 +83,52 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const deleteTask = (id: string) => {
+  const deleteTask = async (id: string) => {
     setTasks((prev) => prev.filter((task) => task.id !== id));
+
+    try {
+      await initializeDatabase();
+      await deleteTaskRecord(id);
+    } catch (error) {
+      console.error("Failed to delete task", error);
+    }
   };
 
-  const updateTask = (id: string, updatedFields: Partial<Task>) => {
+  const updateTask = async (id: string, updatedFields: Partial<Task>) => {
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id ? { ...task, ...updatedFields } : task
       )
     );
+
+    if (updatedFields.category) {
+      addCategory(updatedFields.category);
+    }
+
+    try {
+      await initializeDatabase();
+      await updateTaskRecord(id, updatedFields);
+    } catch (error) {
+      console.error("Failed to update task", error);
+    }
   };
 
-  const toggleTaskCompleted = (id: string) => {
+  const toggleTaskCompleted = async (id: string) => {
+    const task = tasks.find((item) => item.id === id);
+    const nextCompleted = !task?.completed;
+
     setTasks((prev) =>
       prev.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
+        task.id === id ? { ...task, completed: nextCompleted } : task
       )
     );
+
+    try {
+      await initializeDatabase();
+      await setTaskCompleted(id, nextCompleted);
+    } catch (error) {
+      console.error("Failed to update task completion", error);
+    }
   };
 
   return (
@@ -82,4 +156,19 @@ export function useTasks() {
   }
 
   return context;
+}
+
+function mergeCategories(currentCategories: string[], taskList: Task[]) {
+  return taskList.reduce((categories, task) => {
+    const cleanedCategory = task.category.trim();
+
+    if (
+      !cleanedCategory ||
+      categories.some((item) => item.toLowerCase() === cleanedCategory.toLowerCase())
+    ) {
+      return categories;
+    }
+
+    return [...categories, cleanedCategory];
+  }, currentCategories);
 }

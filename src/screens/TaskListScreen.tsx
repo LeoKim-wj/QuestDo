@@ -231,7 +231,7 @@ export default function TaskListScreen() {
             <Pressable
               onPress={async () => {
                 await cancelTaskNotification(task.notificationId);
-                deleteTask(task.id);
+                await deleteTask(task.id);
               }}
               style={{
                 flex: 1,
