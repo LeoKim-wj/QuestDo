@@ -6,7 +6,7 @@ import { cancelTaskNotification } from "../services/NotificationService";
 
 export default function TaskListScreen() {
   const router = useRouter();
-  const { categories, tasks, deleteTask, toggleTaskCompleted } = useTasks();
+  const { categories, tasks, totalPoints, deleteTask, toggleTaskCompleted } = useTasks();
 
   const [sortBy, setSortBy] = useState<"none" | "priority" | "dueDate">("none");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -43,6 +43,23 @@ export default function TaskListScreen() {
       <Text style={{ fontSize: 28, fontWeight: "bold", marginBottom: 16 }}>
         Manage Tasks
       </Text>
+
+      <View
+        style={{
+          backgroundColor: "#8a008a",
+          padding: 16,
+          borderRadius: 12,
+          alignItems: "center",
+          marginBottom: 14,
+        }}
+      >
+        <Text style={{ color: "white", fontSize: 13, fontWeight: "600", opacity: 0.85 }}>
+          Total Points
+        </Text>
+        <Text style={{ color: "white", fontSize: 36, fontWeight: "bold" }}>
+          {totalPoints}
+        </Text>
+      </View>
 
       <Pressable
         onPress={() => router.push("/create")}
