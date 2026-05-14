@@ -67,7 +67,7 @@ export default function EditTaskScreen() {
     const notificationId = await scheduleTaskNotification(updatedTask);
 
     addCategory(cleanCategory);
-    updateTask(id, {
+    await updateTask(id, {
       title: cleanTitle,
       description: cleanDescription,
       category: cleanCategory,

@@ -46,13 +46,14 @@ export default function CreateTaskScreen() {
       completed: false,
       priority,
       dueDate: parsedDate.toISOString(),
+      createdDate: new Date().toISOString(),
       notificationId: null,
     };
 
     const notificationId = await scheduleTaskNotification(task);
 
     addCategory(cleanCategory);
-    addTask({
+    await addTask({
       ...task,
       notificationId,
     });
