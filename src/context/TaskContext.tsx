@@ -12,6 +12,7 @@ import { Task } from "../types/task";
 type TaskContextType = {
   tasks: Task[];
   categories: string[];
+  totalPoints: number;
   addTask: (task: Task) => Promise<void>;
   addCategory: (category: string) => void;
   deleteTask: (id: string) => Promise<void>;
@@ -131,11 +132,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const totalPoints = tasks.filter((task) => task.completed).length * 5;
+
   return (
     <TaskContext.Provider
       value={{
         tasks,
         categories,
+        totalPoints,
         addTask,
         addCategory,
         deleteTask,
