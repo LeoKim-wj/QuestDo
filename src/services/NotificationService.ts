@@ -39,21 +39,30 @@ async function getNotifications() {
   return notificationsModule;
 }
 
-function getReminderDate(dueDate: string) {
-  const date = new Date(dueDate);
+function getReminderDate(dueDate: string, reminderTime: string) {
+  const due = new Date(dueDate);
 
-  if (Number.isNaN(date.getTime())) {
+  if (Number.isNaN(due.getTime())) {
     return null;
   }
 
-  date.setDate(date.getDate() - 1);
-  date.setHours(9, 0, 0, 0);
+  let reminderDate: Date;
 
-  if (date.getTime() <= Date.now()) {
+  if (reminderTime.startsWith("offset:")) {
+    const offsetMinutes = Number(reminderTime.slice(7));
+    reminderDate = new Date(due.getTime() - offsetMinutes * 60 * 1000);
+  } else {
+    const [hours, minutes] = reminderTime.split(":").map(Number);
+    reminderDate = new Date(due);
+    reminderDate.setDate(reminderDate.getDate() - 1);
+    reminderDate.setHours(hours, minutes, 0, 0);
+  }
+
+  if (reminderDate.getTime() <= Date.now()) {
     return null;
   }
 
-  return date;
+  return reminderDate;
 }
 
 async function ensureNotificationChannel(notifications: NotificationsModule) {
@@ -71,7 +80,7 @@ async function ensureNotificationChannel(notifications: NotificationsModule) {
 
 export async function scheduleTaskNotification(task: Task) {
   const notifications = await getNotifications();
-  const notificationDate = getReminderDate(task.dueDate);
+  const notificationDate = getReminderDate(task.dueDate, task.reminderTime ?? "09:00");
 
   if (!notifications || !notificationDate) {
     return null;
@@ -92,7 +101,7 @@ export async function scheduleTaskNotification(task: Task) {
   return notifications.scheduleNotificationAsync({
     content: {
       title: `QuestDo: ${task.title}`,
-      body: `${task.category} task is due on ${new Date(task.dueDate).toLocaleDateString()}.`,
+      body: `${task.category} task is due on ${new Date(task.dueDate).toLocaleDateString("en-NZ")}.`,
       data: { taskId: task.id },
       sound: true,
     },

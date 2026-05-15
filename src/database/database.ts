@@ -45,6 +45,7 @@ const mapRowToTask = (row: TaskRow): Task => ({
   priority: normalizePriority(row.priority),
   dueDate: row.dueDate ?? new Date().toISOString(),
   createdDate: row.createdDate ?? new Date().toISOString(),
+  reminderTime: (row as any).reminderTime ?? "09:00",
   notificationId: row.notificationId,
 });
 
@@ -74,6 +75,7 @@ export async function initializeDatabase() {
   await ensureColumn(database, "dueDate", "TEXT");
   await ensureColumn(database, "createdDate", "TEXT");
   await ensureColumn(database, "notificationId", "TEXT");
+  await ensureColumn(database, "reminderTime", "TEXT");
 
   await database.runAsync(
     "UPDATE tasks SET createdDate = ? WHERE createdDate IS NULL OR createdDate = ''",
@@ -108,8 +110,9 @@ export async function insertTask(task: Task) {
       priority,
       dueDate,
       createdDate,
-      notificationId
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      notificationId,
+      reminderTime
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       task.id,
       task.title,
@@ -121,6 +124,7 @@ export async function insertTask(task: Task) {
       task.dueDate,
       createdDate,
       task.notificationId ?? null,
+      task.reminderTime ?? null,
     ]
   );
 }
@@ -152,7 +156,8 @@ export async function updateTaskRecord(id: string, updatedFields: Partial<Task>)
           priority = ?,
           dueDate = ?,
           createdDate = ?,
-          notificationId = ?
+          notificationId = ?,
+          reminderTime = ?
       WHERE id = ?`,
     [
       mergedTask.title,
@@ -164,6 +169,7 @@ export async function updateTaskRecord(id: string, updatedFields: Partial<Task>)
       mergedTask.dueDate,
       mergedTask.createdDate,
       mergedTask.notificationId ?? null,
+      mergedTask.reminderTime ?? null,
       id,
     ]
   );
