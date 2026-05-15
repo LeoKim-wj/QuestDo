@@ -40,22 +40,29 @@ async function getNotifications() {
 }
 
 function getReminderDate(dueDate: string, reminderTime: string) {
-  const date = new Date(dueDate);
+  const due = new Date(dueDate);
 
-  if (Number.isNaN(date.getTime())) {
+  if (Number.isNaN(due.getTime())) {
     return null;
   }
 
-  const [hours, minutes] = reminderTime.split(":").map(Number);
+  let reminderDate: Date;
 
-  date.setDate(date.getDate() - 1);
-  date.setHours(hours, minutes, 0, 0);
+  if (reminderTime.startsWith("offset:")) {
+    const offsetMinutes = Number(reminderTime.slice(7));
+    reminderDate = new Date(due.getTime() - offsetMinutes * 60 * 1000);
+  } else {
+    const [hours, minutes] = reminderTime.split(":").map(Number);
+    reminderDate = new Date(due);
+    reminderDate.setDate(reminderDate.getDate() - 1);
+    reminderDate.setHours(hours, minutes, 0, 0);
+  }
 
-  if (date.getTime() <= Date.now()) {
+  if (reminderDate.getTime() <= Date.now()) {
     return null;
   }
 
-  return date;
+  return reminderDate;
 }
 
 async function ensureNotificationChannel(notifications: NotificationsModule) {

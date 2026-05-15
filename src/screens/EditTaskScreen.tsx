@@ -23,8 +23,13 @@ export default function EditTaskScreen() {
     task?.dueDate ? task.dueDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
   );
   const existingTime = task?.reminderTime ?? "09:00";
-  const [reminderHour, setReminderHour] = useState(Number(existingTime.split(":")[0]));
-  const [reminderMinute, setReminderMinute] = useState(Number(existingTime.split(":")[1]));
+  const isOffset = existingTime.startsWith("offset:");
+  const [reminderMode, setReminderMode] = useState<"time" | "offset">(isOffset ? "offset" : "time");
+  const [reminderHour, setReminderHour] = useState(isOffset ? 9 : Number(existingTime.split(":")[0]));
+  const [reminderMinute, setReminderMinute] = useState(isOffset ? 0 : Number(existingTime.split(":")[1]));
+  const existingOffsetMins = isOffset ? Number(existingTime.slice(7)) : 60;
+  const [offsetHours, setOffsetHours] = useState(Math.floor(existingOffsetMins / 60));
+  const [offsetMinutes, setOffsetMinutes] = useState(existingOffsetMins % 60);
   const [error, setError] = useState("");
 
   if (!task || !id) {
@@ -56,6 +61,11 @@ export default function EditTaskScreen() {
       return;
     }
 
+    const reminderTime =
+      reminderMode === "offset"
+        ? `offset:${offsetHours * 60 + offsetMinutes}`
+        : `${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`;
+
     await cancelTaskNotification(task.notificationId);
 
     const updatedTask = {
@@ -65,6 +75,7 @@ export default function EditTaskScreen() {
       category: cleanCategory,
       priority,
       dueDate: parsedDate.toISOString(),
+      reminderTime,
       notificationId: null,
     };
     const notificationId = await scheduleTaskNotification(updatedTask);
@@ -76,6 +87,7 @@ export default function EditTaskScreen() {
       category: cleanCategory,
       priority,
       dueDate: parsedDate.toISOString(),
+      reminderTime,
       notificationId,
     });
 
@@ -224,6 +236,95 @@ export default function EditTaskScreen() {
             </Pressable>
           ))}
         </View>
+      </View>
+
+      <View
+        style={{
+          backgroundColor: "white",
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 16,
+        }}
+      >
+        <Text style={{ fontWeight: "bold", marginBottom: 10 }}>Reminder</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+          {(["time", "offset"] as const).map((mode) => (
+            <Pressable
+              key={mode}
+              onPress={() => setReminderMode(mode)}
+              style={{
+                flex: 1,
+                backgroundColor: reminderMode === mode ? "#8a008a" : "#e8e8ef",
+                padding: 10,
+                borderRadius: 8,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: reminderMode === mode ? "white" : "black" }}>
+                {mode === "time" ? "Specific Time" : "Before Deadline"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {reminderMode === "time" ? (
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "#555", marginBottom: 10 }}>Time on the day before the deadline</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setReminderHour((h) => (h + 1) % 24)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+                  {String(reminderHour).padStart(2, "0")}
+                </Text>
+                <Pressable onPress={() => setReminderHour((h) => (h - 1 + 24) % 24)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+              </View>
+              <Text style={{ fontSize: 28, fontWeight: "bold" }}>:</Text>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setReminderMinute((m) => (m + 5) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+                  {String(reminderMinute).padStart(2, "0")}
+                </Text>
+                <Pressable onPress={() => setReminderMinute((m) => (m - 5 + 60) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "#555", marginBottom: 10 }}>How long before the deadline</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setOffsetHours((h) => Math.min(h + 1, 72))} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>{offsetHours}</Text>
+                <Pressable onPress={() => setOffsetHours((h) => Math.max(h - 1, 0))} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+                <Text style={{ color: "#555" }}>hrs</Text>
+              </View>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setOffsetMinutes((m) => (m + 5) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+                  {String(offsetMinutes).padStart(2, "0")}
+                </Text>
+                <Pressable onPress={() => setOffsetMinutes((m) => (m - 5 + 60) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+                <Text style={{ color: "#555" }}>min</Text>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
 
       <View
