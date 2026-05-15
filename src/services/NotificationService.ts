@@ -101,7 +101,7 @@ export async function scheduleTaskNotification(task: Task) {
   return notifications.scheduleNotificationAsync({
     content: {
       title: `QuestDo: ${task.title}`,
-      body: `${task.category} task is due on ${new Date(task.dueDate).toLocaleDateString()}.`,
+      body: `${task.category} task is due on ${new Date(task.dueDate).toLocaleDateString("en-NZ")}.`,
       data: { taskId: task.id },
       sound: true,
     },
