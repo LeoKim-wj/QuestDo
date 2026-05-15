@@ -2,17 +2,16 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import {
   deleteTaskRecord,
   getTasks,
-  initializeDatabase,
+  initializeFirebase,
   insertTask,
   setTaskCompleted,
   updateTaskRecord,
-} from "../database/database";
+} from "../database/firebase";
 import { Task } from "../types/task";
 
 type TaskContextType = {
   tasks: Task[];
   categories: string[];
-  totalPoints: number;
   addTask: (task: Task) => Promise<void>;
   addCategory: (category: string) => void;
   deleteTask: (id: string) => Promise<void>;
@@ -32,7 +31,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
     const loadTasks = async () => {
       try {
-        await initializeDatabase();
+        await initializeFirebase();
         const storedTasks = await getTasks();
 
         if (!isMounted) {
@@ -42,7 +41,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         setTasks(storedTasks);
         setCategories((prev) => mergeCategories(prev, storedTasks));
       } catch (error) {
-        console.error("Failed to initialize task database", error);
+        console.error("Failed to load tasks from Firebase", error);
       }
     };
 
@@ -63,10 +62,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     addCategory(taskWithCreatedDate.category);
 
     try {
-      await initializeDatabase();
       await insertTask(taskWithCreatedDate);
     } catch (error) {
-      console.error("Failed to save task", error);
+      console.error("Failed to save task to Firebase", error);
     }
   };
 
@@ -88,10 +86,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setTasks((prev) => prev.filter((task) => task.id !== id));
 
     try {
-      await initializeDatabase();
       await deleteTaskRecord(id);
     } catch (error) {
-      console.error("Failed to delete task", error);
+      console.error("Failed to delete task from Firebase", error);
     }
   };
 
@@ -107,10 +104,9 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      await initializeDatabase();
       await updateTaskRecord(id, updatedFields);
     } catch (error) {
-      console.error("Failed to update task", error);
+      console.error("Failed to update task in Firebase", error);
     }
   };
 
@@ -125,21 +121,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
 
     try {
-      await initializeDatabase();
       await setTaskCompleted(id, nextCompleted);
     } catch (error) {
-      console.error("Failed to update task completion", error);
+      console.error("Failed to update task completion in Firebase", error);
     }
   };
-
-  const totalPoints = tasks.filter((task) => task.completed).length * 5;
 
   return (
     <TaskContext.Provider
       value={{
         tasks,
         categories,
-        totalPoints,
         addTask,
         addCategory,
         deleteTask,
