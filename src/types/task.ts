@@ -9,5 +9,6 @@ export type Task = {
   priority: TaskPriority;
   dueDate: string;
   createdDate: string;
+  reminderTime: string;
   notificationId?: string | null;
 };

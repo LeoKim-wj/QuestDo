@@ -15,6 +15,8 @@ export default function CreateTaskScreen() {
   const [customCategory, setCustomCategory] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
   const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [reminderHour, setReminderHour] = useState(9);
+  const [reminderMinute, setReminderMinute] = useState(0);
   const [error, setError] = useState("");
 
   const saveTask = async () => {
@@ -38,6 +40,8 @@ export default function CreateTaskScreen() {
       return;
     }
 
+    const reminderTime = `${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`;
+
     const task = {
       id: Date.now().toString(),
       title: cleanTitle,
@@ -47,6 +51,7 @@ export default function CreateTaskScreen() {
       priority,
       dueDate: parsedDate.toISOString(),
       createdDate: new Date().toISOString(),
+      reminderTime,
       notificationId: null,
     };
 
@@ -198,6 +203,54 @@ export default function CreateTaskScreen() {
               </Text>
             </Pressable>
           ))}
+        </View>
+      </View>
+
+      <View
+        style={{
+          backgroundColor: "white",
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 16,
+        }}
+      >
+        <Text style={{ fontWeight: "bold", marginBottom: 12 }}>Reminder Time (day before)</Text>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}>
+          <View style={{ alignItems: "center", gap: 6 }}>
+            <Pressable
+              onPress={() => setReminderHour((h) => (h + 1) % 24)}
+              style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+            >
+              <Text style={{ fontSize: 18 }}>+</Text>
+            </Pressable>
+            <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+              {String(reminderHour).padStart(2, "0")}
+            </Text>
+            <Pressable
+              onPress={() => setReminderHour((h) => (h - 1 + 24) % 24)}
+              style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+            >
+              <Text style={{ fontSize: 18 }}>−</Text>
+            </Pressable>
+          </View>
+          <Text style={{ fontSize: 28, fontWeight: "bold" }}>:</Text>
+          <View style={{ alignItems: "center", gap: 6 }}>
+            <Pressable
+              onPress={() => setReminderMinute((m) => (m + 5) % 60)}
+              style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+            >
+              <Text style={{ fontSize: 18 }}>+</Text>
+            </Pressable>
+            <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+              {String(reminderMinute).padStart(2, "0")}
+            </Text>
+            <Pressable
+              onPress={() => setReminderMinute((m) => (m - 5 + 60) % 60)}
+              style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}
+            >
+              <Text style={{ fontSize: 18 }}>−</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
 

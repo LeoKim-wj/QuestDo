@@ -39,15 +39,17 @@ async function getNotifications() {
   return notificationsModule;
 }
 
-function getReminderDate(dueDate: string) {
+function getReminderDate(dueDate: string, reminderTime: string) {
   const date = new Date(dueDate);
 
   if (Number.isNaN(date.getTime())) {
     return null;
   }
 
+  const [hours, minutes] = reminderTime.split(":").map(Number);
+
   date.setDate(date.getDate() - 1);
-  date.setHours(9, 0, 0, 0);
+  date.setHours(hours, minutes, 0, 0);
 
   if (date.getTime() <= Date.now()) {
     return null;
@@ -71,7 +73,7 @@ async function ensureNotificationChannel(notifications: NotificationsModule) {
 
 export async function scheduleTaskNotification(task: Task) {
   const notifications = await getNotifications();
-  const notificationDate = getReminderDate(task.dueDate);
+  const notificationDate = getReminderDate(task.dueDate, task.reminderTime ?? "09:00");
 
   if (!notifications || !notificationDate) {
     return null;

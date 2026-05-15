@@ -22,6 +22,9 @@ export default function EditTaskScreen() {
   const [dueDate, setDueDate] = useState(
     task?.dueDate ? task.dueDate.slice(0, 10) : new Date().toISOString().slice(0, 10)
   );
+  const existingTime = task?.reminderTime ?? "09:00";
+  const [reminderHour, setReminderHour] = useState(Number(existingTime.split(":")[0]));
+  const [reminderMinute, setReminderMinute] = useState(Number(existingTime.split(":")[1]));
   const [error, setError] = useState("");
 
   if (!task || !id) {
