@@ -13,7 +13,7 @@ const formatDate = (dateString: string) =>
   });
 
 export default function HomeScreen() {
-  const { tasks } = useTasks();
+  const { tasks, totalPoints } = useTasks();
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
@@ -50,11 +50,18 @@ export default function HomeScreen() {
       <Text style={styles.date}>{currentDate}</Text>
       <Text style={styles.time}>{currentTime}</Text>
 
-      <View style={styles.streakBox}>
-        <Text style={styles.streakTitle}>Current Streak</Text>
-        <Text style={styles.streakText}>
-          {completedTodayCount}/{todaysTasks.length || 0} tasks today
-        </Text>
+      <View style={styles.statsRow}>
+        <View style={[styles.streakBox, { flex: 1 }]}>
+          <Text style={styles.streakTitle}>Current Streak</Text>
+          <Text style={styles.streakText}>
+            {completedTodayCount}/{todaysTasks.length || 0} tasks today
+          </Text>
+        </View>
+
+        <View style={[styles.streakBox, { flex: 1 }]}>
+          <Text style={styles.streakTitle}>Total Points</Text>
+          <Text style={styles.streakText}>{totalPoints} pts</Text>
+        </View>
       </View>
 
       <Text style={styles.sectionTitle}>{"Today's Tasks"}</Text>
@@ -147,11 +154,15 @@ const styles = StyleSheet.create({
     color: "#8a008a",
     marginBottom: 20,
   },
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
   streakBox: {
     backgroundColor: "#8a008a",
     padding: 15,
     borderRadius: 12,
-    marginBottom: 20,
   },
   streakTitle: {
     color: "#fff",
