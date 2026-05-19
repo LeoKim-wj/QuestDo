@@ -13,7 +13,8 @@ const formatDate = (dateString: string) =>
   });
 
 export default function HomeScreen() {
-  const { tasks, totalPoints } = useTasks();
+  const { tasks } = useTasks();
+  const totalPoints = tasks.filter((task) => task.completed).length * 5;
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
