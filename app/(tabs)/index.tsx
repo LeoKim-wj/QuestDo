@@ -5,6 +5,12 @@ import { useTasks } from "@/src/context/TaskContext";
 
 const toDateKey = (dateString: string) => new Date(dateString).toISOString().slice(0, 10);
 
+const bonusRewards = [
+  { milestone: 3, title: "Small Bonus", description: "Complete 3 tasks" },
+  { milestone: 5, title: "Medium Bonus", description: "Complete 5 tasks" },
+  { milestone: 10, title: "Big Bonus", description: "Complete 10 tasks" },
+];
+
 const formatDate = (dateString: string) =>
   new Date(dateString).toLocaleDateString("en-NZ", {
     day: "2-digit",
@@ -41,6 +47,7 @@ export default function HomeScreen() {
     .slice(0, 3);
 
   const completedTodayCount = todaysTasks.filter((task) => task.completed).length;
+  const completedTaskCount = tasks.filter((task) => task.completed).length;
 
   return (
     <ScrollView style={styles.container}>
@@ -62,6 +69,38 @@ export default function HomeScreen() {
           <Text style={styles.streakTitle}>Total Points</Text>
           <Text style={styles.streakText}>{totalPoints} pts</Text>
         </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Bonus Rewards</Text>
+      <View style={styles.rewardsCard}>
+        {bonusRewards.map((reward) => {
+          const isUnlocked = completedTaskCount >= reward.milestone;
+
+          return (
+            <View
+              key={reward.title}
+              style={[
+                styles.rewardRow,
+                isUnlocked ? styles.rewardUnlocked : styles.rewardLocked,
+              ]}
+            >
+              <View style={styles.rewardTextGroup}>
+                <Text style={styles.rewardTitle}>{reward.title}</Text>
+                <Text style={styles.rewardDescription}>
+                  {reward.description}
+                </Text>
+              </View>
+              <Text
+                style={[
+                  styles.rewardStatus,
+                  isUnlocked ? styles.unlockedText : styles.lockedText,
+                ]}
+              >
+                {isUnlocked ? "Unlocked" : "Locked"}
+              </Text>
+            </View>
+          );
+        })}
       </View>
 
       <Text style={styles.sectionTitle}>{"Today's Tasks"}</Text>
@@ -206,6 +245,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 10,
+    marginBottom: 30,
   },
   linkButton: {
     flex: 1,
@@ -217,5 +257,48 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  rewardsCard: {
+    backgroundColor: "#f2f2f2",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  rewardRow: {
+    alignItems: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    padding: 12,
+  },
+  rewardUnlocked: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#86efac",
+  },
+  rewardLocked: {
+    backgroundColor: "#fff",
+    borderColor: "#ddd",
+  },
+  rewardTextGroup: {
+    flex: 1,
+    marginRight: 10,
+  },
+  rewardTitle: {
+    fontWeight: "bold",
+  },
+  rewardDescription: {
+    color: "#555",
+    marginTop: 3,
+  },
+  rewardStatus: {
+    fontWeight: "bold",
+  },
+  unlockedText: {
+    color: "#16a34a",
+  },
+  lockedText: {
+    color: "#6b7280",
   },
 });
