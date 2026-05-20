@@ -12,6 +12,7 @@ import { Task } from "../types/task";
 type TaskContextType = {
   tasks: Task[];
   categories: string[];
+  totalPoints: number;
   addTask: (task: Task) => Promise<void>;
   addCategory: (category: string) => void;
   deleteTask: (id: string) => Promise<void>;
@@ -25,6 +26,7 @@ const defaultCategories = ["Study", "Work", "Personal"];
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
+  const totalPoints = tasks.filter((task) => task.completed).length * 5;
 
   useEffect(() => {
     let isMounted = true;
@@ -132,6 +134,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       value={{
         tasks,
         categories,
+        totalPoints,
         addTask,
         addCategory,
         deleteTask,
