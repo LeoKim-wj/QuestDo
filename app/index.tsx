@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -12,24 +13,45 @@ import {
     View,
     ViewStyle,
 } from 'react-native';
+import { useAuth } from '../src/context/AuthContext';
 import { Fonts } from '../constants/theme';
+
+function getFirebaseAuthError(code: string): string {
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Invalid email or password. Please try again.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/too-many-requests':
+      return 'Too many failed attempts. Please try again later.';
+    case 'auth/network-request-failed':
+      return 'Network error. Please check your connection.';
+    default:
+      return 'Authentication failed. Please try again.';
+  }
+}
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { signIn } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Extract font family cleanly depending on what token matches the running environment
   const activeFont = (Fonts as any)?.[Platform.OS]?.sans || 'normal';
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     let isValid = true;
     setEmailError('');
     setPasswordError('');
+    setAuthError('');
 
     if (!email.trim()) {
       setEmailError('*Email is required.*');
@@ -44,9 +66,16 @@ export default function LoginScreen() {
       isValid = false;
     }
 
-    if (isValid) {
-      console.log('Logging in with:', email, password);
+    if (!isValid) return;
+
+    setLoading(true);
+    try {
+      await signIn(email, password);
       router.replace('/(tabs)');
+    } catch (error: any) {
+      setAuthError(getFirebaseAuthError(error?.code ?? ''));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,12 +127,25 @@ export default function LoginScreen() {
             {passwordError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{passwordError}</Text> : null}
           </View>
 
+          {authError ? (
+            <Text style={[styles.authErrorText, { fontFamily: activeFont }]}>{authError}</Text>
+          ) : null}
+
           <TouchableOpacity style={styles.forgotContainer} activeOpacity={0.7}>
             <Text style={[styles.forgotText, { fontFamily: activeFont }]}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin} activeOpacity={0.8}>
-            <Text style={[styles.loginButtonText, { fontFamily: activeFont }]}>Login</Text>
+          <TouchableOpacity
+            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            activeOpacity={0.8}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={[styles.loginButtonText, { fontFamily: activeFont }]}>Login</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -135,9 +177,11 @@ interface Styles {
   input: TextStyle;
   inputInvalid: TextStyle;
   errorText: TextStyle;
+  authErrorText: TextStyle;
   forgotContainer: ViewStyle;
   forgotText: TextStyle;
   loginButton: ViewStyle;
+  loginButtonDisabled: ViewStyle;
   loginButtonText: TextStyle;
   signUpContainer: ViewStyle;
   signUpText: TextStyle;
@@ -221,6 +265,12 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 13,
     marginTop: 6,
   },
+  authErrorText: {
+    color: '#cc0000',
+    fontSize: 13,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
   forgotContainer: {
     alignSelf: 'flex-start',
     marginBottom: 24,
@@ -236,6 +286,9 @@ const styles = StyleSheet.create<Styles>({
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
   },
   loginButtonText: {
     color: '#fff',
