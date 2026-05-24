@@ -4,6 +4,7 @@ import {
   deleteDoc,
   doc,
   Firestore,
+  getDoc,
   getDocs,
   getFirestore,
   orderBy,
@@ -23,7 +24,12 @@ type TaskDocument = {
   priority?: string;
   dueDate?: string;
   createdDate?: string;
+  reminderTime?: string;
   notificationId?: string | null;
+};
+
+type RewardStateDocument = {
+  redeemedRewardIds?: string[];
 };
 
 const firebaseConfig = {
@@ -75,6 +81,10 @@ function getTasksCollection(firestore: Firestore) {
   return collection(firestore, "tasks");
 }
 
+function getRewardStateDocument(firestore: Firestore) {
+  return doc(firestore, "rewardState", "currentUser");
+}
+
 function normalizePriority(priority?: string): TaskPriority {
   if (priority === "high" || priority === "low" || priority === "medium") {
     return priority;
@@ -93,6 +103,7 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     priority: normalizePriority(data.priority),
     dueDate: data.dueDate ?? new Date().toISOString(),
     createdDate: data.createdDate ?? new Date().toISOString(),
+    reminderTime: data.reminderTime ?? "",
     notificationId: data.notificationId ?? null,
   };
 }
@@ -110,6 +121,7 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     priority: task.priority,
     dueDate: task.dueDate,
     createdDate,
+    reminderTime: task.reminderTime ?? "",
     notificationId: task.notificationId ?? null,
   };
 }
@@ -181,4 +193,36 @@ export async function setTaskCompleted(id: string, completed: boolean) {
     completed,
     status: completed ? "completed" : "incomplete",
   });
+}
+
+export async function getRedeemedRewardIds() {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return [];
+  }
+
+  const snapshot = await getDoc(getRewardStateDocument(firestore));
+
+  if (!snapshot.exists()) {
+    return [];
+  }
+
+  const data = snapshot.data() as RewardStateDocument;
+
+  return Array.isArray(data.redeemedRewardIds) ? data.redeemedRewardIds : [];
+}
+
+export async function saveRedeemedRewardIds(redeemedRewardIds: string[]) {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return;
+  }
+
+  await setDoc(
+    getRewardStateDocument(firestore),
+    { redeemedRewardIds },
+    { merge: true }
+  );
 }
