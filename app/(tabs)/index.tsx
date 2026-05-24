@@ -2,14 +2,9 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 import { useTasks } from "@/src/context/TaskContext";
+import { bonusRewards } from "@/src/rewards/bonusRewards";
 
 const toDateKey = (dateString: string) => new Date(dateString).toISOString().slice(0, 10);
-
-const bonusRewards = [
-  { milestone: 3, title: "Small Bonus", description: "Complete 3 tasks" },
-  { milestone: 5, title: "Medium Bonus", description: "Complete 5 tasks" },
-  { milestone: 10, title: "Big Bonus", description: "Complete 10 tasks" },
-];
 
 const formatDate = (dateString: string) =>
   new Date(dateString).toLocaleDateString("en-NZ", {
@@ -19,7 +14,7 @@ const formatDate = (dateString: string) =>
   });
 
 export default function HomeScreen() {
-  const { tasks, totalPoints } = useTasks();
+  const { tasks, totalPoints, redeemedRewardIds, redeemBonusReward } = useTasks();
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
@@ -75,29 +70,53 @@ export default function HomeScreen() {
       <View style={styles.rewardsCard}>
         {bonusRewards.map((reward) => {
           const isUnlocked = completedTaskCount >= reward.milestone;
+          const isRedeemed = redeemedRewardIds.includes(reward.id);
 
           return (
             <View
               key={reward.title}
               style={[
                 styles.rewardRow,
-                isUnlocked ? styles.rewardUnlocked : styles.rewardLocked,
+                isRedeemed || isUnlocked
+                  ? styles.rewardUnlocked
+                  : styles.rewardLocked,
               ]}
             >
               <View style={styles.rewardTextGroup}>
                 <Text style={styles.rewardTitle}>{reward.title}</Text>
                 <Text style={styles.rewardDescription}>
-                  {reward.description}
+                  {reward.description} for +{reward.points} pts
                 </Text>
               </View>
-              <Text
+              <TouchableOpacity
+                disabled={!isUnlocked || isRedeemed}
+                onPress={() => redeemBonusReward(reward.id)}
                 style={[
-                  styles.rewardStatus,
-                  isUnlocked ? styles.unlockedText : styles.lockedText,
+                  styles.redeemButton,
+                  isRedeemed
+                    ? styles.redeemedButton
+                    : isUnlocked
+                      ? styles.unlockedButton
+                      : styles.lockedButton,
                 ]}
               >
-                {isUnlocked ? "Unlocked" : "Locked"}
-              </Text>
+                <Text
+                  style={[
+                    styles.rewardStatus,
+                    isRedeemed
+                      ? styles.redeemedText
+                      : isUnlocked
+                        ? styles.unlockedButtonText
+                        : styles.lockedText,
+                  ]}
+                >
+                  {isRedeemed
+                    ? "Redeemed"
+                    : isUnlocked
+                      ? "Redeem"
+                      : "Locked"}
+                </Text>
+              </TouchableOpacity>
             </View>
           );
         })}
@@ -295,7 +314,28 @@ const styles = StyleSheet.create({
   rewardStatus: {
     fontWeight: "bold",
   },
-  unlockedText: {
+  redeemButton: {
+    alignItems: "center",
+    borderRadius: 8,
+    minWidth: 86,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  unlockedButton: {
+    backgroundColor: "#16a34a",
+  },
+  lockedButton: {
+    backgroundColor: "#e5e7eb",
+  },
+  redeemedButton: {
+    backgroundColor: "#d1fae5",
+    borderColor: "#16a34a",
+    borderWidth: 1,
+  },
+  unlockedButtonText: {
+    color: "#fff",
+  },
+  redeemedText: {
     color: "#16a34a",
   },
   lockedText: {
