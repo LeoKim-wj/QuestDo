@@ -6,7 +6,7 @@ import { cancelTaskNotification } from "../services/NotificationService";
 
 export default function TaskListScreen() {
   const router = useRouter();
-  const { categories, tasks, deleteTask, toggleTaskCompleted } = useTasks();
+  const { categories, tasks, deleteTask, toggleTaskCompleted, updateTask } = useTasks();
 
   const [sortBy, setSortBy] = useState<"none" | "priority" | "dueDate">("none");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -240,6 +240,54 @@ export default function TaskListScreen() {
               ? new Date(task.dueDate).toLocaleDateString("en-NZ")
               : "Not set"}
           </Text>
+
+          {task.subtasks && task.subtasks.length > 0 && (
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontWeight: "bold", fontSize: 13, color: task.completed ? "#6b7280" : "#333", marginBottom: 6 }}>
+                Steps: {task.subtasks.filter((s) => s.completed).length}/{task.subtasks.length} done
+              </Text>
+              {task.subtasks.map((subtask) => (
+                <Pressable
+                  key={subtask.id}
+                  onPress={() => {
+                    const updatedSubtasks = task.subtasks!.map((s) =>
+                      s.id === subtask.id ? { ...s, completed: !s.completed } : s
+                    );
+                    updateTask(task.id, { subtasks: updatedSubtasks });
+                  }}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingVertical: 4,
+                  }}
+                >
+                  <View style={{
+                    width: 18,
+                    height: 18,
+                    borderRadius: 4,
+                    borderWidth: 2,
+                    borderColor: subtask.completed ? "#8a008a" : "#aaa",
+                    backgroundColor: subtask.completed ? "#8a008a" : "white",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    {subtask.completed && (
+                      <Text style={{ color: "white", fontSize: 11, fontWeight: "bold" }}>✓</Text>
+                    )}
+                  </View>
+                  <Text style={{
+                    flex: 1,
+                    fontSize: 13,
+                    color: subtask.completed ? "#6b7280" : "#333",
+                    textDecorationLine: subtask.completed ? "line-through" : "none",
+                  }}>
+                    {subtask.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          )}
 
           <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
             <Pressable
