@@ -1,3 +1,4 @@
+import { calculateStreak } from "@/src/utils/streakUtils";
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
@@ -52,11 +53,12 @@ export default function HomeScreen() {
       <Text style={styles.date}>{currentDate}</Text>
       <Text style={styles.time}>{currentTime}</Text>
 
+    
       <View style={styles.statsRow}>
         <View style={[styles.streakBox, { flex: 1 }]}>
           <Text style={styles.streakTitle}>Current Streak</Text>
           <Text style={styles.streakText}>
-            {completedTodayCount}/{todaysTasks.length || 0} tasks today
+            {calculateStreak(tasks)} day streak
           </Text>
         </View>
 
