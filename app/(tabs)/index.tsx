@@ -3,6 +3,7 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { router } from "expo-router";
 import { useTasks } from "@/src/context/TaskContext";
+import { bonusRewards } from "@/src/rewards/bonusRewards";
 
 const toDateKey = (dateString: string) => new Date(dateString).toISOString().slice(0, 10);
 
@@ -14,8 +15,7 @@ const formatDate = (dateString: string) =>
   });
 
 export default function HomeScreen() {
-  const { tasks } = useTasks();
-  
+  const { tasks, totalPoints, redeemedRewardIds, redeemBonusReward } = useTasks();
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
@@ -43,6 +43,7 @@ export default function HomeScreen() {
     .slice(0, 3);
 
   const completedTodayCount = todaysTasks.filter((task) => task.completed).length;
+  const completedTaskCount = tasks.filter((task) => task.completed).length;
 
   return (
     <ScrollView style={styles.container}>
@@ -52,11 +53,75 @@ export default function HomeScreen() {
       <Text style={styles.date}>{currentDate}</Text>
       <Text style={styles.time}>{currentTime}</Text>
 
-      <View style={styles.streakBox}>
-        <Text style={styles.streakTitle}>Current Streak</Text>
-        <Text style={styles.streakText}>
-  {calculateStreak(tasks)} day streak
-</Text>
+    
+      <View style={styles.statsRow}>
+        <View style={[styles.streakBox, { flex: 1 }]}>
+          <Text style={styles.streakTitle}>Current Streak</Text>
+          <Text style={styles.streakText}>
+            {calculateStreak(tasks)} day streak
+          </Text>
+        </View>
+
+        <View style={[styles.streakBox, { flex: 1 }]}>
+          <Text style={styles.streakTitle}>Total Points</Text>
+          <Text style={styles.streakText}>{totalPoints} pts</Text>
+        </View>
+      </View>
+
+      <Text style={styles.sectionTitle}>Bonus Rewards</Text>
+      <View style={styles.rewardsCard}>
+        {bonusRewards.map((reward) => {
+          const isUnlocked = completedTaskCount >= reward.milestone;
+          const isRedeemed = redeemedRewardIds.includes(reward.id);
+
+          return (
+            <View
+              key={reward.title}
+              style={[
+                styles.rewardRow,
+                isRedeemed || isUnlocked
+                  ? styles.rewardUnlocked
+                  : styles.rewardLocked,
+              ]}
+            >
+              <View style={styles.rewardTextGroup}>
+                <Text style={styles.rewardTitle}>{reward.title}</Text>
+                <Text style={styles.rewardDescription}>
+                  {reward.description} for +{reward.points} pts
+                </Text>
+              </View>
+              <TouchableOpacity
+                disabled={!isUnlocked || isRedeemed}
+                onPress={() => redeemBonusReward(reward.id)}
+                style={[
+                  styles.redeemButton,
+                  isRedeemed
+                    ? styles.redeemedButton
+                    : isUnlocked
+                      ? styles.unlockedButton
+                      : styles.lockedButton,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.rewardStatus,
+                    isRedeemed
+                      ? styles.redeemedText
+                      : isUnlocked
+                        ? styles.unlockedButtonText
+                        : styles.lockedText,
+                  ]}
+                >
+                  {isRedeemed
+                    ? "Redeemed"
+                    : isUnlocked
+                      ? "Redeem"
+                      : "Locked"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </View>
 
       <Text style={styles.sectionTitle}>{"Today's Tasks"}</Text>
@@ -149,11 +214,15 @@ const styles = StyleSheet.create({
     color: "#8a008a",
     marginBottom: 20,
   },
+  statsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 20,
+  },
   streakBox: {
     backgroundColor: "#8a008a",
     padding: 15,
     borderRadius: 12,
-    marginBottom: 20,
   },
   streakTitle: {
     color: "#fff",
@@ -197,6 +266,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     marginTop: 10,
+    marginBottom: 30,
   },
   linkButton: {
     flex: 1,
@@ -208,5 +278,69 @@ const styles = StyleSheet.create({
   linkText: {
     color: "#fff",
     fontWeight: "bold",
+  },
+  rewardsCard: {
+    backgroundColor: "#f2f2f2",
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 10,
+  },
+  rewardRow: {
+    alignItems: "center",
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 8,
+    padding: 12,
+  },
+  rewardUnlocked: {
+    backgroundColor: "#f0fdf4",
+    borderColor: "#86efac",
+  },
+  rewardLocked: {
+    backgroundColor: "#fff",
+    borderColor: "#ddd",
+  },
+  rewardTextGroup: {
+    flex: 1,
+    marginRight: 10,
+  },
+  rewardTitle: {
+    fontWeight: "bold",
+  },
+  rewardDescription: {
+    color: "#555",
+    marginTop: 3,
+  },
+  rewardStatus: {
+    fontWeight: "bold",
+  },
+  redeemButton: {
+    alignItems: "center",
+    borderRadius: 8,
+    minWidth: 86,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  unlockedButton: {
+    backgroundColor: "#16a34a",
+  },
+  lockedButton: {
+    backgroundColor: "#e5e7eb",
+  },
+  redeemedButton: {
+    backgroundColor: "#d1fae5",
+    borderColor: "#16a34a",
+    borderWidth: 1,
+  },
+  unlockedButtonText: {
+    color: "#fff",
+  },
+  redeemedText: {
+    color: "#16a34a",
+  },
+  lockedText: {
+    color: "#6b7280",
   },
 });
