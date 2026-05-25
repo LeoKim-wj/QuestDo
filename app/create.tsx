@@ -1,3 +1,268 @@
-import CreateTaskScreen from "@/src/screens/CreateTaskScreen";
+"use client";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { useTasks } from "../src/context/TaskContext"; // Adjusted path to src
+import { scheduleTaskNotification } from "../src/services/NotificationService";
+import { RecurrenceFrequency, Task, TaskPriority } from "../src/types/task";
 
-export default CreateTaskScreen;
+export default function CreateTaskScreen() {
+  const router = useRouter();
+  const { addCategory, addTask, categories } = useTasks();
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [category, setCategory] = useState(categories[0] || "Study");
+  const [customCategory, setCustomCategory] = useState("");
+  const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency>("none"); // Tracking state
+  const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [reminderMode, setReminderMode] = useState<"time" | "offset">("time");
+  const [reminderHour, setReminderHour] = useState(9);
+  const [reminderMinute, setReminderMinute] = useState(0);
+  const [offsetHours, setOffsetHours] = useState(1);
+  const [offsetMinutes, setOffsetMinutes] = useState(0);
+  const [error, setError] = useState("");
+
+  const saveTask = async () => {
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+    const cleanCategory = (customCategory.trim() || category).trim();
+    const parsedDate = new Date(dueDate);
+
+    if (!cleanTitle) {
+      setError("Task title is required.");
+      return;
+    }
+
+    if (!cleanCategory) {
+      setError("Category is required.");
+      return;
+    }
+
+    if (Number.isNaN(parsedDate.getTime())) {
+      setError("Due date must be a valid date.");
+      return;
+    }
+
+    const reminderTime =
+      reminderMode === "offset"
+        ? `offset:${offsetHours * 60 + offsetMinutes}`
+        : `${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`;
+
+    const task: Task = {
+      id: Date.now().toString(),
+      title: cleanTitle,
+      description: cleanDescription,
+      category: cleanCategory,
+      completed: false,
+      priority,
+      dueDate: parsedDate.toISOString(),
+      createdDate: new Date().toISOString(),
+      reminderTime,
+      notificationId: null,
+      recurrence: recurrence !== "none" ? recurrence : undefined,
+    };
+
+    const notificationId = await scheduleTaskNotification(task);
+
+    addCategory(cleanCategory);
+    await addTask({
+      ...task,
+      notificationId,
+    });
+
+    router.back();
+  };
+
+  return (
+    <ScrollView style={{ flex: 1, padding: 20, backgroundColor: "#f8f8fb" }}>
+      <Text style={{ fontSize: 28, fontWeight: "bold", marginBottom: 16 }}>
+        Add Task
+      </Text>
+
+      {/* Task Name */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Task Name</Text>
+        <TextInput
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Enter task title"
+          placeholderTextColor="gray"
+          style={{ borderWidth: 1, borderColor: "#ddd", padding: 12, borderRadius: 8, color: "black", backgroundColor: "white" }}
+        />
+      </View>
+
+      {/* Description */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Description</Text>
+        <TextInput
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Enter task details"
+          placeholderTextColor="gray"
+          multiline
+          style={{ borderWidth: 1, borderColor: "#ddd", padding: 12, borderRadius: 8, minHeight: 90, color: "black", backgroundColor: "white" }}
+        />
+      </View>
+
+      {/* Category */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Category</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 10 }}>
+          {categories.map((item) => (
+            <Pressable
+              key={item}
+              onPress={() => { setCategory(item); setCustomCategory(""); }}
+              style={{ flex: 1, backgroundColor: !customCategory && category === item ? "#8a008a" : "#e8e8ef", padding: 10, borderRadius: 8, alignItems: "center" }}
+            >
+              <Text style={{ color: !customCategory && category === item ? "white" : "black" }}>{item}</Text>
+            </Pressable>
+          ))}
+        </View>
+        <TextInput
+          value={customCategory}
+          onChangeText={setCustomCategory}
+          placeholder="Or type a new category"
+          placeholderTextColor="gray"
+          style={{ borderWidth: 1, borderColor: "#ddd", padding: 12, borderRadius: 8, color: "black", backgroundColor: "white" }}
+        />
+      </View>
+
+      {/* Priority */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Priority</Text>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {(["high", "medium", "low"] as const).map((level) => (
+            <Pressable
+              key={level}
+              onPress={() => setPriority(level)}
+              style={{ flex: 1, backgroundColor: priority === level ? "#8a008a" : "#e8e8ef", padding: 10, borderRadius: 8, alignItems: "center" }}
+            >
+              <Text style={{ color: priority === level ? "white" : "black" }}>{level.toUpperCase()}</Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* REPEAT TASK COMPONENT */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Repeat Task</Text>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {(["none", "daily", "weekly", "monthly"] as const).map((freq) => (
+            <Pressable
+              key={freq}
+              onPress={() => setRecurrence(freq)}
+              style={{ flex: 1, backgroundColor: recurrence === freq ? "#8a008a" : "#e8e8ef", padding: 10, borderRadius: 8, alignItems: "center" }}
+            >
+              <Text style={{ color: recurrence === freq ? "white" : "black", fontSize: 12, fontWeight: "500" }}>
+                {freq.charAt(0).toUpperCase() + freq.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* Reminder Layout */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 10 }}>Reminder</Text>
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+          {(["time", "offset"] as const).map((mode) => (
+            <Pressable
+              key={mode}
+              onPress={() => setReminderMode(mode)}
+              style={{ flex: 1, backgroundColor: reminderMode === mode ? "#8a008a" : "#e8e8ef", padding: 10, borderRadius: 8, alignItems: "center" }}
+            >
+              <Text style={{ color: reminderMode === mode ? "white" : "black" }}>
+                {mode === "time" ? "Specific Time" : "Before Deadline"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {reminderMode === "time" ? (
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "#555", marginBottom: 10 }}>Time on the day before the deadline</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setReminderHour((h) => (h + 1) % 24)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+                  {String(reminderHour).padStart(2, "0")}
+                </Text>
+                <Pressable onPress={() => setReminderHour((h) => (h - 1 + 24) % 24)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+              </View>
+              <Text style={{ fontSize: 28, fontWeight: "bold" }}>:</Text>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setReminderMinute((m) => (m + 5) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+                  {String(reminderMinute).padStart(2, "0")}
+                </Text>
+                <Pressable onPress={() => setReminderMinute((m) => (m - 5 + 60) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        ) : (
+          <View style={{ alignItems: "center" }}>
+            <Text style={{ color: "#555", marginBottom: 10 }}>How long before the deadline</Text>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setOffsetHours((h) => Math.min(h + 1, 72))} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>{offsetHours}</Text>
+                <Pressable onPress={() => setOffsetHours((h) => Math.max(h - 1, 0))} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+                <Text style={{ color: "#555" }}>hrs</Text>
+              </View>
+              <View style={{ alignItems: "center", gap: 6 }}>
+                <Pressable onPress={() => setOffsetMinutes((m) => (m + 5) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>+</Text>
+                </Pressable>
+                <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
+                  {String(offsetMinutes).padStart(2, "0")}
+                </Text>
+                <Pressable onPress={() => setOffsetMinutes((m) => (m - 5 + 60) % 60)} style={{ backgroundColor: "#e8e8ef", paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 }}>
+                  <Text style={{ fontSize: 18 }}>−</Text>
+                </Pressable>
+                <Text style={{ color: "#555" }}>min</Text>
+              </View>
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Due Date */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16 }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Due Date</Text>
+        <TextInput
+          value={dueDate}
+          onChangeText={setDueDate}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor="gray"
+          style={{ borderWidth: 1, borderColor: "#ddd", padding: 12, borderRadius: 8, color: "black", backgroundColor: "white" }}
+        />
+      </View>
+
+      {error ? (
+        <Text style={{ color: "#eb5757", fontWeight: "bold", marginBottom: 12 }}>{error}</Text>
+      ) : null}
+
+      {/* Save Button */}
+      <Pressable
+        onPress={saveTask}
+        style={{ backgroundColor: "#8a008a", padding: 14, borderRadius: 10, alignItems: "center", marginBottom: 30 }}
+      >
+        <Text style={{ color: "white", fontWeight: "bold" }}>Save Task</Text>
+      </Pressable>
+    </ScrollView>
+  );
+}
