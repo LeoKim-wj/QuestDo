@@ -14,6 +14,12 @@ import {
 } from "firebase/firestore";
 import { Task, TaskPriority } from "../types/task";
 
+type SubtaskDocument = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
+
 type TaskDocument = {
   id?: string;
   title?: string;
@@ -26,6 +32,7 @@ type TaskDocument = {
   createdDate?: string;
   reminderTime?: string;
   notificationId?: string | null;
+  subtasks?: SubtaskDocument[];
 };
 
 type RewardStateDocument = {
@@ -105,6 +112,7 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     createdDate: data.createdDate ?? new Date().toISOString(),
     reminderTime: data.reminderTime ?? "",
     notificationId: data.notificationId ?? null,
+    subtasks: data.subtasks ?? [],
   };
 }
 
@@ -123,6 +131,7 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     createdDate,
     reminderTime: task.reminderTime ?? "",
     notificationId: task.notificationId ?? null,
+    subtasks: task.subtasks ?? [],
   };
 }
 
