@@ -1,10 +1,11 @@
 "use client";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTasks } from "../src/context/TaskContext"; // Adjusted path to src
 import { scheduleTaskNotification } from "../src/services/NotificationService";
-import { RecurrenceFrequency, Task, TaskPriority } from "../src/types/task";
+import { breakdownGoal, DetailLevel } from "../src/services/geminiService";
+import { RecurrenceFrequency, Subtask, Task, TaskPriority } from "../src/types/task";
 
 export default function CreateTaskScreen() {
   const router = useRouter();
@@ -23,6 +24,39 @@ export default function CreateTaskScreen() {
   const [offsetHours, setOffsetHours] = useState(1);
   const [offsetMinutes, setOffsetMinutes] = useState(0);
   const [error, setError] = useState("");
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [detailLevel, setDetailLevel] = useState<DetailLevel>("detailed");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const handleBreakdown = async () => {
+    if (!title.trim()) {
+      setAiError("Enter a task title first.");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError("");
+
+    try {
+      const suggestions = await breakdownGoal(title.trim(), description.trim(), detailLevel);
+      setSubtasks(
+        suggestions.map((suggestion, index) => ({
+          id: `${Date.now()}-${index}`,
+          title: suggestion,
+          completed: false,
+        }))
+      );
+    } catch (err: any) {
+      setAiError(err?.message ?? "Failed to generate subtasks. Please try again.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const removeSubtask = (id: string) => {
+    setSubtasks((current) => current.filter((subtask) => subtask.id !== id));
+  };
 
   const saveTask = async () => {
     const cleanTitle = title.trim();
@@ -61,6 +95,7 @@ export default function CreateTaskScreen() {
       createdDate: new Date().toISOString(),
       reminderTime,
       notificationId: null,
+      subtasks,
       recurrence: recurrence !== "none" ? recurrence : undefined,
     };
 
@@ -104,6 +139,68 @@ export default function CreateTaskScreen() {
           multiline
           style={{ borderWidth: 1, borderColor: "#ddd", padding: 12, borderRadius: 8, minHeight: 90, color: "black", backgroundColor: "white" }}
         />
+      </View>
+
+      {/* AI Breakdown */}
+      <View style={{ backgroundColor: "white", padding: 14, borderRadius: 12, marginBottom: 16, borderWidth: 1.5, borderColor: "#8a008a" }}>
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Break Down with AI</Text>
+        <Text style={{ color: "#555", fontSize: 13, marginBottom: 12 }}>
+          Choose how detailed you want the steps to be, then tap the button.
+        </Text>
+
+        <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
+          {(["simple", "detailed", "step-by-step"] as DetailLevel[]).map((level) => (
+            <Pressable
+              key={level}
+              onPress={() => setDetailLevel(level)}
+              style={{ flex: 1, backgroundColor: detailLevel === level ? "#8a008a" : "#e8e8ef", padding: 8, borderRadius: 8, alignItems: "center" }}
+            >
+              <Text style={{ color: detailLevel === level ? "white" : "black", fontSize: 12, fontWeight: "600" }}>
+                {level === "simple" ? "Simple" : level === "detailed" ? "Detailed" : "Step-by-Step"}
+              </Text>
+              <Text style={{ color: detailLevel === level ? "#eee" : "#888", fontSize: 11 }}>
+                {level === "simple" ? "3-4 steps" : level === "detailed" ? "5-6 steps" : "7-10 steps"}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Pressable
+          onPress={handleBreakdown}
+          disabled={aiLoading}
+          style={{ backgroundColor: aiLoading ? "#c080c0" : "#8a008a", padding: 12, borderRadius: 8, alignItems: "center", flexDirection: "row", justifyContent: "center", gap: 8 }}
+        >
+          {aiLoading ? <ActivityIndicator color="white" size="small" /> : null}
+          <Text style={{ color: "white", fontWeight: "bold" }}>
+            {aiLoading ? "Breaking down..." : "Break Down with AI"}
+          </Text>
+        </Pressable>
+
+        {aiError ? (
+          <Text style={{ color: "#eb5757", marginTop: 8, fontSize: 13 }}>{aiError}</Text>
+        ) : null}
+
+        {subtasks.length > 0 ? (
+          <View style={{ marginTop: 14 }}>
+            <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
+              Suggested Steps ({subtasks.length})
+            </Text>
+            {subtasks.map((subtask, index) => (
+              <View
+                key={subtask.id}
+                style={{ flexDirection: "row", alignItems: "center", backgroundColor: "#f8f0f8", borderRadius: 8, padding: 10, marginBottom: 6, gap: 8 }}
+              >
+                <Text style={{ color: "#8a008a", fontWeight: "bold", width: 20 }}>
+                  {index + 1}.
+                </Text>
+                <Text style={{ flex: 1, color: "#333" }}>{subtask.title}</Text>
+                <Pressable onPress={() => removeSubtask(subtask.id)}>
+                  <Text style={{ color: "#eb5757", fontWeight: "bold", fontSize: 16 }}>Remove</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        ) : null}
       </View>
 
       {/* Category */}
