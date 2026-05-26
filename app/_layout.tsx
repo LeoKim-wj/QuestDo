@@ -49,11 +49,12 @@ function AuthGuard() {
   useEffect(() => {
     if (loading) return;
 
-    const onLoginScreen = segments[0] === 'index';
+    const publicAuthScreens = ['index', 'signup', 'forgot-password'];
+    const onPublicAuthScreen = publicAuthScreens.includes(segments[0] ?? 'index');
 
-    if (!user && !onLoginScreen) {
+    if (!user && !onPublicAuthScreen) {
       router.replace('/');
-    } else if (user && onLoginScreen) {
+    } else if (user && onPublicAuthScreen) {
       router.replace('/(tabs)');
     }
   }, [user, loading, segments, router]);
@@ -72,6 +73,8 @@ export default function RootLayout() {
           <AuthGuard />
           <Stack>
             <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="signup" options={{ headerShown: false }} />
+            <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
             <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
             <Stack.Screen name="create" options={{ title: 'Add Task' }} />

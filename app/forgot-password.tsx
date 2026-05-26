@@ -1,81 +1,65 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TextStyle,
-    TouchableOpacity,
-    View,
-    ViewStyle,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useAuth } from '../src/context/AuthContext';
 import { Fonts } from '../constants/theme';
+import { useAuth } from '../src/context/AuthContext';
 
-function getFirebaseAuthError(code: string): string {
+function getResetError(code: string): string {
   switch (code) {
-    case 'auth/invalid-credential':
-    case 'auth/user-not-found':
-    case 'auth/wrong-password':
-      return 'Invalid email or password. Please try again.';
     case 'auth/invalid-email':
       return 'Please enter a valid email address.';
-    case 'auth/missing-password':
-      return 'Password is required.';
-    case 'auth/too-many-requests':
-      return 'Too many failed attempts. Please try again later.';
+    case 'auth/user-not-found':
+      return 'No account was found for this email.';
     case 'auth/network-request-failed':
       return 'Network error. Please check your connection.';
     default:
-      return 'Authentication failed. Please try again.';
+      return 'Could not send reset email. Please try again.';
   }
 }
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { resetPassword } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
   const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [message, setMessage] = useState('');
   const [authError, setAuthError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const activeFont = (Fonts as any)?.[Platform.OS]?.sans || 'normal';
 
-  const handleLogin = async () => {
-    let isValid = true;
+  const handleResetPassword = async () => {
     setEmailError('');
-    setPasswordError('');
     setAuthError('');
+    setMessage('');
 
     if (!email.trim()) {
       setEmailError('*Email is required.*');
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      return;
+    }
+
+    if (!/\S+@\S+\.\S+/.test(email)) {
       setEmailError('*Please enter a valid email address.*');
-      isValid = false;
+      return;
     }
-
-    if (!password) {
-      setPasswordError('*Password is required.*');
-      isValid = false;
-    }
-
-    if (!isValid) return;
 
     setLoading(true);
     try {
-      await signIn(email, password);
-      router.replace('/(tabs)');
+      await resetPassword(email.trim());
+      setMessage('Password reset email sent. Please check your inbox.');
     } catch (error: any) {
-      setAuthError(getFirebaseAuthError(error?.code ?? ''));
+      setAuthError(getResetError(error?.code ?? ''));
     } finally {
       setLoading(false);
     }
@@ -89,7 +73,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
           <Text style={[styles.brandText, { fontFamily: activeFont }]}>QuestDo</Text>
-          <Text style={[styles.subtitleText, { fontFamily: activeFont }]}>Login</Text>
+          <Text style={[styles.subtitleText, { fontFamily: activeFont }]}>Forgot Password</Text>
         </View>
 
         <View style={styles.card}>
@@ -103,6 +87,7 @@ export default function LoginScreen() {
               onChangeText={(text) => {
                 setEmail(text);
                 if (emailError) setEmailError('');
+                if (message) setMessage('');
               }}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -111,63 +96,37 @@ export default function LoginScreen() {
             {emailError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{emailError}</Text> : null}
           </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { fontFamily: activeFont }]}>Password</Text>
-            <TextInput
-              style={[styles.input, passwordError ? styles.inputInvalid : null]}
-              placeholder="••••"
-              placeholderTextColor="#999"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (passwordError) setPasswordError('');
-              }}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {passwordError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{passwordError}</Text> : null}
-          </View>
-
           {authError ? (
             <Text style={[styles.authErrorText, { fontFamily: activeFont }]}>{authError}</Text>
           ) : null}
 
-          <TouchableOpacity
-            style={styles.forgotContainer}
-            activeOpacity={0.7}
-            onPress={() => router.push('/forgot-password')}
-          >
-            <Text style={[styles.forgotText, { fontFamily: activeFont }]}>Forgot Password?</Text>
-          </TouchableOpacity>
+          {message ? (
+            <Text style={[styles.successText, { fontFamily: activeFont }]}>{message}</Text>
+          ) : null}
 
           <TouchableOpacity
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
+            style={[styles.primaryButton, loading && styles.primaryButtonDisabled]}
+            onPress={handleResetPassword}
             activeOpacity={0.8}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={[styles.loginButtonText, { fontFamily: activeFont }]}>Login</Text>
+              <Text style={[styles.primaryButtonText, { fontFamily: activeFont }]}>Send Reset Email</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={styles.signUpContainer}
+          style={styles.secondaryLinkContainer}
           activeOpacity={0.7}
-          onPress={() => router.push('/signup')}
+          onPress={() => router.replace('/')}
         >
-          <Text style={[styles.signUpText, { fontFamily: activeFont }]}>
-            Don't have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
+          <Text style={[styles.secondaryLinkText, { fontFamily: activeFont }]}>
+            Back to <Text style={styles.secondaryLinkHighlight}>Login</Text>
           </Text>
         </TouchableOpacity>
-
-        <View style={styles.footer}>
-          <Text style={[styles.footerText, { fontFamily: activeFont }]}>QuestDo | Terms | Privacy</Text>
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -175,32 +134,7 @@ export default function LoginScreen() {
 
 const BRAND_PURPLE = '#8b008b';
 
-interface Styles {
-  container: ViewStyle;
-  scrollContainer: ViewStyle;
-  headerContainer: ViewStyle;
-  brandText: TextStyle;
-  subtitleText: TextStyle;
-  card: ViewStyle;
-  inputGroup: ViewStyle;
-  label: TextStyle;
-  input: TextStyle;
-  inputInvalid: TextStyle;
-  errorText: TextStyle;
-  authErrorText: TextStyle;
-  forgotContainer: ViewStyle;
-  forgotText: TextStyle;
-  loginButton: ViewStyle;
-  loginButtonDisabled: ViewStyle;
-  loginButtonText: TextStyle;
-  signUpContainer: ViewStyle;
-  signUpText: TextStyle;
-  signUpHighlight: TextStyle;
-  footer: ViewStyle;
-  footerText: TextStyle;
-}
-
-const styles = StyleSheet.create<Styles>({
+const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -235,17 +169,6 @@ const styles = StyleSheet.create<Styles>({
     borderWidth: 1,
     borderColor: '#e1e4e6',
     width: Platform.OS === 'web' ? 420 : '100%',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.05,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
   },
   inputGroup: {
     marginBottom: 20,
@@ -281,49 +204,37 @@ const styles = StyleSheet.create<Styles>({
     marginBottom: 16,
     textAlign: 'center',
   },
-  forgotContainer: {
-    alignSelf: 'flex-start',
-    marginBottom: 24,
+  successText: {
+    color: '#166534',
+    fontSize: 13,
+    marginBottom: 16,
+    textAlign: 'center',
   },
-  forgotText: {
-    color: BRAND_PURPLE,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loginButton: {
+  primaryButton: {
     backgroundColor: BRAND_PURPLE,
     borderRadius: 100,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loginButtonDisabled: {
+  primaryButtonDisabled: {
     opacity: 0.6,
   },
-  loginButtonText: {
+  primaryButtonText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
   },
-  signUpContainer: {
+  secondaryLinkContainer: {
     marginTop: 24,
     alignItems: 'center',
   },
-  signUpText: {
+  secondaryLinkText: {
     fontSize: 14,
     color: '#555',
   },
-  signUpHighlight: {
+  secondaryLinkHighlight: {
     color: BRAND_PURPLE,
     fontWeight: '600',
-  },
-  footer: {
-    marginTop: 60,
-    alignItems: 'center',
-    width: Platform.OS === 'web' ? 420 : '100%',
-  },
-  footerText: {
-    fontSize: 12,
-    color: '#888',
   },
 });
