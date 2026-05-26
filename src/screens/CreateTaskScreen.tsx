@@ -88,7 +88,11 @@ export default function CreateTaskScreen() {
       createdDate: new Date().toISOString(),
       reminderTime,
       notificationId: null,
-      subtasks,
+      subtasks: subtasks.map((subtask) => ({
+        id: subtask.id,
+        title: subtask.title,
+        completed: subtask.completed,
+      })),
     };
 
     const notificationId = await scheduleTaskNotification(task);
