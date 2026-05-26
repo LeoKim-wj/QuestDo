@@ -12,7 +12,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { Subtask, Task, TaskPriority } from "../types/task";
+import { RecurrenceFrequency, Subtask, Task, TaskPriority } from "../types/task";
 
 type SubtaskDocument = {
   id: string;
@@ -32,6 +32,7 @@ type TaskDocument = {
   createdDate?: string;
   reminderTime?: string;
   notificationId?: string | null;
+  recurrence?: string | null;
   subtasks?: SubtaskDocument[];
 };
 
@@ -100,6 +101,14 @@ function normalizePriority(priority?: string): TaskPriority {
   return "medium";
 }
 
+function normalizeRecurrence(recurrence?: string | null): Exclude<RecurrenceFrequency, "none"> | undefined {
+  if (recurrence === "daily" || recurrence === "weekly" || recurrence === "monthly") {
+    return recurrence;
+  }
+
+  return undefined;
+}
+
 function normalizeSubtasks(subtasks?: SubtaskDocument[]): Subtask[] {
   if (!Array.isArray(subtasks)) {
     return [];
@@ -126,6 +135,7 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     createdDate: data.createdDate ?? new Date().toISOString(),
     reminderTime: data.reminderTime ?? "",
     notificationId: data.notificationId ?? null,
+    recurrence: normalizeRecurrence(data.recurrence),
     subtasks: normalizeSubtasks(data.subtasks),
   };
 }
@@ -145,6 +155,7 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     createdDate,
     reminderTime: task.reminderTime ?? "",
     notificationId: task.notificationId ?? null,
+    recurrence: task.recurrence ?? null,
     subtasks: normalizeSubtasks(task.subtasks),
   };
 }
@@ -197,6 +208,9 @@ export async function updateTaskRecord(id: string, updatedFields: Partial<Task>)
 
   const updatePayload = {
     ...updatedFields,
+    ...("recurrence" in updatedFields
+      ? { recurrence: updatedFields.recurrence ?? null }
+      : {}),
     ...(typeof updatedFields.completed === "boolean"
       ? { status: updatedFields.completed ? "completed" : "incomplete" }
       : {}),
