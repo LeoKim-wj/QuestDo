@@ -13,43 +13,35 @@ import {
     ViewStyle,
 } from 'react-native';
 import { Fonts } from '../constants/theme';
-import { getAuthErrorMessage, signIn } from '../src/services/authService';
+import { getAuthErrorMessage, sendPasswordReset } from '../src/services/authService';
 
-export default function LoginScreen() {
+export default function ForgotPasswordScreen() {
   const router = useRouter();
 
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [passwordError, setPasswordError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const activeFont = (Fonts as any)?.[Platform.OS]?.sans || 'normal';
 
-  const handleLogin = async () => {
-    let isValid = true;
+  const handleReset = async () => {
     setEmailError('');
-    setPasswordError('');
+    setSuccessMessage('');
 
     if (!email.trim()) {
       setEmailError('*Email is required.*');
-      isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      return;
+    }
+    if (!/\S+@\S+\.\S+/.test(email)) {
       setEmailError('*Please enter a valid email address.*');
-      isValid = false;
+      return;
     }
-
-    if (!password) {
-      setPasswordError('*Password is required.*');
-      isValid = false;
-    }
-
-    if (!isValid) return;
 
     setIsLoading(true);
     try {
-      await signIn(email.trim(), password);
-      router.replace('/(tabs)');
+      await sendPasswordReset(email.trim());
+      setSuccessMessage('Check your inbox for a password reset link.');
     } catch (error) {
       setEmailError(getAuthErrorMessage(error));
     } finally {
@@ -65,73 +57,58 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
           <Text style={[styles.brandText, { fontFamily: activeFont }]}>QuestDo</Text>
-          <Text style={[styles.subtitleText, { fontFamily: activeFont }]}>Login</Text>
+          <Text style={[styles.subtitleText, { fontFamily: activeFont }]}>Reset Password</Text>
+          <Text style={[styles.instructionText, { fontFamily: activeFont }]}>
+            Enter your email and we'll send you a link to reset your password.
+          </Text>
         </View>
 
         <View style={styles.card}>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { fontFamily: activeFont }]}>Email</Text>
-            <TextInput
-              style={[styles.input, emailError ? styles.inputInvalid : null]}
-              placeholder="youremail@example.com"
-              placeholderTextColor="#999"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                if (emailError) setEmailError('');
-              }}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {emailError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{emailError}</Text> : null}
-          </View>
+          {successMessage ? (
+            <View style={styles.successContainer}>
+              <Text style={[styles.successText, { fontFamily: activeFont }]}>{successMessage}</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.inputGroup}>
+                <Text style={[styles.label, { fontFamily: activeFont }]}>Email</Text>
+                <TextInput
+                  style={[styles.input, emailError ? styles.inputInvalid : null]}
+                  placeholder="youremail@example.com"
+                  placeholderTextColor="#999"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (emailError) setEmailError('');
+                  }}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+                {emailError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{emailError}</Text> : null}
+              </View>
 
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { fontFamily: activeFont }]}>Password</Text>
-            <TextInput
-              style={[styles.input, passwordError ? styles.inputInvalid : null]}
-              placeholder="••••"
-              placeholderTextColor="#999"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                if (passwordError) setPasswordError('');
-              }}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
-            {passwordError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{passwordError}</Text> : null}
-          </View>
-
-          <TouchableOpacity
-            style={styles.forgotContainer}
-            onPress={() => router.push('/forgot-password')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.forgotText, { fontFamily: activeFont }]}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
-            activeOpacity={0.8}
-            disabled={isLoading}
-          >
-            <Text style={[styles.loginButtonText, { fontFamily: activeFont }]}>
-              {isLoading ? 'Logging in...' : 'Login'}
-            </Text>
-          </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.resetButton, isLoading && styles.resetButtonDisabled]}
+                onPress={handleReset}
+                activeOpacity={0.8}
+                disabled={isLoading}
+              >
+                <Text style={[styles.resetButtonText, { fontFamily: activeFont }]}>
+                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         <TouchableOpacity
-          style={styles.signUpContainer}
-          onPress={() => router.push('/signup')}
+          style={styles.backContainer}
+          onPress={() => router.replace('/')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.signUpText, { fontFamily: activeFont }]}>
-            Don't have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
+          <Text style={[styles.backText, { fontFamily: activeFont }]}>
+            Back to <Text style={styles.backHighlight}>Login</Text>
           </Text>
         </TouchableOpacity>
 
@@ -151,20 +128,21 @@ interface Styles {
   headerContainer: ViewStyle;
   brandText: TextStyle;
   subtitleText: TextStyle;
+  instructionText: TextStyle;
   card: ViewStyle;
   inputGroup: ViewStyle;
   label: TextStyle;
   input: TextStyle;
   inputInvalid: TextStyle;
   errorText: TextStyle;
-  forgotContainer: ViewStyle;
-  forgotText: TextStyle;
-  loginButton: ViewStyle;
-  loginButtonDisabled: ViewStyle;
-  loginButtonText: TextStyle;
-  signUpContainer: ViewStyle;
-  signUpText: TextStyle;
-  signUpHighlight: TextStyle;
+  successContainer: ViewStyle;
+  successText: TextStyle;
+  resetButton: ViewStyle;
+  resetButtonDisabled: ViewStyle;
+  resetButtonText: TextStyle;
+  backContainer: ViewStyle;
+  backText: TextStyle;
+  backHighlight: TextStyle;
   footer: ViewStyle;
   footerText: TextStyle;
 }
@@ -196,6 +174,12 @@ const styles = StyleSheet.create<Styles>({
     fontWeight: '700',
     color: '#11181C',
     marginTop: 20,
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#555',
+    marginTop: 8,
+    lineHeight: 20,
   },
   card: {
     backgroundColor: '#fff',
@@ -244,39 +228,42 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 13,
     marginTop: 6,
   },
-  forgotContainer: {
-    alignSelf: 'flex-start',
-    marginBottom: 24,
+  successContainer: {
+    backgroundColor: '#f0faf0',
+    borderRadius: 8,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#b2dfb2',
   },
-  forgotText: {
-    color: BRAND_PURPLE,
+  successText: {
+    color: '#2e7d32',
     fontSize: 14,
-    fontWeight: '500',
+    lineHeight: 20,
   },
-  loginButton: {
+  resetButton: {
     backgroundColor: BRAND_PURPLE,
     borderRadius: 100,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  loginButtonDisabled: {
+  resetButtonDisabled: {
     opacity: 0.6,
   },
-  loginButtonText: {
+  resetButtonText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
   },
-  signUpContainer: {
+  backContainer: {
     marginTop: 24,
     alignItems: 'center',
   },
-  signUpText: {
+  backText: {
     fontSize: 14,
     color: '#555',
   },
-  signUpHighlight: {
+  backHighlight: {
     color: BRAND_PURPLE,
     fontWeight: '600',
   },

@@ -13,23 +13,26 @@ import {
     ViewStyle,
 } from 'react-native';
 import { Fonts } from '../constants/theme';
-import { getAuthErrorMessage, signIn } from '../src/services/authService';
+import { getAuthErrorMessage, signUp } from '../src/services/authService';
 
-export default function LoginScreen() {
+export default function SignUpScreen() {
   const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const activeFont = (Fonts as any)?.[Platform.OS]?.sans || 'normal';
 
-  const handleLogin = async () => {
+  const handleSignUp = async () => {
     let isValid = true;
     setEmailError('');
     setPasswordError('');
+    setConfirmPasswordError('');
 
     if (!email.trim()) {
       setEmailError('*Email is required.*');
@@ -42,13 +45,24 @@ export default function LoginScreen() {
     if (!password) {
       setPasswordError('*Password is required.*');
       isValid = false;
+    } else if (password.length < 6) {
+      setPasswordError('*Password must be at least 6 characters.*');
+      isValid = false;
+    }
+
+    if (!confirmPassword) {
+      setConfirmPasswordError('*Please confirm your password.*');
+      isValid = false;
+    } else if (password !== confirmPassword) {
+      setConfirmPasswordError('*Passwords do not match.*');
+      isValid = false;
     }
 
     if (!isValid) return;
 
     setIsLoading(true);
     try {
-      await signIn(email.trim(), password);
+      await signUp(email.trim(), password);
       router.replace('/(tabs)');
     } catch (error) {
       setEmailError(getAuthErrorMessage(error));
@@ -65,7 +79,7 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.headerContainer}>
           <Text style={[styles.brandText, { fontFamily: activeFont }]}>QuestDo</Text>
-          <Text style={[styles.subtitleText, { fontFamily: activeFont }]}>Login</Text>
+          <Text style={[styles.subtitleText, { fontFamily: activeFont }]}>Create Account</Text>
         </View>
 
         <View style={styles.card}>
@@ -91,7 +105,7 @@ export default function LoginScreen() {
             <Text style={[styles.label, { fontFamily: activeFont }]}>Password</Text>
             <TextInput
               style={[styles.input, passwordError ? styles.inputInvalid : null]}
-              placeholder="••••"
+              placeholder="Min. 6 characters"
               placeholderTextColor="#999"
               value={password}
               onChangeText={(text) => {
@@ -105,33 +119,43 @@ export default function LoginScreen() {
             {passwordError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{passwordError}</Text> : null}
           </View>
 
-          <TouchableOpacity
-            style={styles.forgotContainer}
-            onPress={() => router.push('/forgot-password')}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.forgotText, { fontFamily: activeFont }]}>Forgot Password?</Text>
-          </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { fontFamily: activeFont }]}>Confirm Password</Text>
+            <TextInput
+              style={[styles.input, confirmPasswordError ? styles.inputInvalid : null]}
+              placeholder="Re-enter your password"
+              placeholderTextColor="#999"
+              value={confirmPassword}
+              onChangeText={(text) => {
+                setConfirmPassword(text);
+                if (confirmPasswordError) setConfirmPasswordError('');
+              }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {confirmPasswordError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{confirmPasswordError}</Text> : null}
+          </View>
 
           <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
+            style={[styles.signUpButton, isLoading && styles.signUpButtonDisabled]}
+            onPress={handleSignUp}
             activeOpacity={0.8}
             disabled={isLoading}
           >
-            <Text style={[styles.loginButtonText, { fontFamily: activeFont }]}>
-              {isLoading ? 'Logging in...' : 'Login'}
+            <Text style={[styles.signUpButtonText, { fontFamily: activeFont }]}>
+              {isLoading ? 'Creating account...' : 'Sign Up'}
             </Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
-          style={styles.signUpContainer}
-          onPress={() => router.push('/signup')}
+          style={styles.loginContainer}
+          onPress={() => router.replace('/')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.signUpText, { fontFamily: activeFont }]}>
-            Don't have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
+          <Text style={[styles.loginText, { fontFamily: activeFont }]}>
+            Already have an account? <Text style={styles.loginHighlight}>Login</Text>
           </Text>
         </TouchableOpacity>
 
@@ -157,14 +181,12 @@ interface Styles {
   input: TextStyle;
   inputInvalid: TextStyle;
   errorText: TextStyle;
-  forgotContainer: ViewStyle;
-  forgotText: TextStyle;
-  loginButton: ViewStyle;
-  loginButtonDisabled: ViewStyle;
-  loginButtonText: TextStyle;
-  signUpContainer: ViewStyle;
-  signUpText: TextStyle;
-  signUpHighlight: TextStyle;
+  signUpButton: ViewStyle;
+  signUpButtonDisabled: ViewStyle;
+  signUpButtonText: TextStyle;
+  loginContainer: ViewStyle;
+  loginText: TextStyle;
+  loginHighlight: TextStyle;
   footer: ViewStyle;
   footerText: TextStyle;
 }
@@ -244,39 +266,31 @@ const styles = StyleSheet.create<Styles>({
     fontSize: 13,
     marginTop: 6,
   },
-  forgotContainer: {
-    alignSelf: 'flex-start',
-    marginBottom: 24,
-  },
-  forgotText: {
-    color: BRAND_PURPLE,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  loginButton: {
+  signUpButton: {
     backgroundColor: BRAND_PURPLE,
     borderRadius: 100,
     paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 4,
   },
-  loginButtonDisabled: {
+  signUpButtonDisabled: {
     opacity: 0.6,
   },
-  loginButtonText: {
+  signUpButtonText: {
     color: '#fff',
     fontSize: 15,
     fontWeight: '600',
   },
-  signUpContainer: {
+  loginContainer: {
     marginTop: 24,
     alignItems: 'center',
   },
-  signUpText: {
+  loginText: {
     fontSize: 14,
     color: '#555',
   },
-  signUpHighlight: {
+  loginHighlight: {
     color: BRAND_PURPLE,
     fontWeight: '600',
   },

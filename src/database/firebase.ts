@@ -61,6 +61,14 @@ function hasFirebaseConfig() {
   );
 }
 
+export function getFirebaseApp(): FirebaseApp | null {
+  if (!hasFirebaseConfig()) return null;
+  if (!app) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  }
+  return app;
+}
+
 function getTaskDatabase() {
   if (!hasFirebaseConfig()) {
     if (!hasWarnedAboutConfig) {
