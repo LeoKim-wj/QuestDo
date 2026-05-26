@@ -1,4 +1,5 @@
 export type TaskPriority = "high" | "medium" | "low";
+export type RecurrenceFrequency = "none" | "daily" | "weekly" | "monthly";
 
 export type Subtask = {
   id: string;
@@ -17,5 +18,6 @@ export type Task = {
   createdDate: string;
   reminderTime: string;
   notificationId?: string | null;
+  recurrence?: Exclude<RecurrenceFrequency, "none">;
   subtasks?: Subtask[];
 };
