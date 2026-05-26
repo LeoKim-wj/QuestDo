@@ -12,7 +12,7 @@ import {
   setDoc,
   updateDoc,
 } from "firebase/firestore";
-import { Task, TaskPriority } from "../types/task";
+import { Subtask, Task, TaskPriority } from "../types/task";
 
 type SubtaskDocument = {
   id: string;
@@ -100,6 +100,20 @@ function normalizePriority(priority?: string): TaskPriority {
   return "medium";
 }
 
+function normalizeSubtasks(subtasks?: SubtaskDocument[]): Subtask[] {
+  if (!Array.isArray(subtasks)) {
+    return [];
+  }
+
+  return subtasks
+    .filter((subtask) => subtask && typeof subtask.title === "string")
+    .map((subtask, index) => ({
+      id: subtask.id || `subtask-${index}`,
+      title: subtask.title,
+      completed: Boolean(subtask.completed),
+    }));
+}
+
 function mapDocumentToTask(id: string, data: TaskDocument): Task {
   return {
     id: data.id ?? id,
@@ -112,7 +126,7 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     createdDate: data.createdDate ?? new Date().toISOString(),
     reminderTime: data.reminderTime ?? "",
     notificationId: data.notificationId ?? null,
-    subtasks: data.subtasks ?? [],
+    subtasks: normalizeSubtasks(data.subtasks),
   };
 }
 
@@ -131,7 +145,7 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     createdDate,
     reminderTime: task.reminderTime ?? "",
     notificationId: task.notificationId ?? null,
-    subtasks: task.subtasks ?? [],
+    subtasks: normalizeSubtasks(task.subtasks),
   };
 }
 

@@ -73,6 +73,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const taskWithCreatedDate = {
       ...task,
       createdDate: task.createdDate ?? new Date().toISOString(),
+      subtasks: task.subtasks ?? [],
     };
 
     setTasks((prev) => [...prev, taskWithCreatedDate]);
