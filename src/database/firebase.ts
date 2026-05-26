@@ -135,6 +135,16 @@ function taskToDocument(task: Task): Required<TaskDocument> {
   };
 }
 
+export function getFirebaseApp(): FirebaseApp {
+  if (!hasFirebaseConfig()) {
+    throw new Error('Firebase is not configured. Check your .env file.');
+  }
+  if (!app) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  }
+  return app;
+}
+
 export async function initializeFirebase() {
   getTaskDatabase();
 }
