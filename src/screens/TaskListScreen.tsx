@@ -44,6 +44,10 @@ export default function TaskListScreen() {
       : tasks.filter((task) => task.category === selectedCategory);
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+
     if (sortBy === "priority") {
       const result =
         priorityOrder[a.priority || "medium"] -
@@ -59,7 +63,7 @@ export default function TaskListScreen() {
       return sortDirection === "asc" ? result : -result;
     }
 
-    return 0;
+    return getDueDateTime(a.dueDate) - getDueDateTime(b.dueDate);
   });
 
   return (
@@ -235,6 +239,11 @@ export default function TaskListScreen() {
           <Text style={{ marginTop: 4, color: task.completed ? "#6b7280" : "#000" }}>
             Status: {task.completed ? "Completed" : "Incomplete"}
           </Text>
+          {task.generatedFromTaskId ? (
+            <Text style={{ color: "#16a34a", fontWeight: "bold" }}>
+              Next repeat
+            </Text>
+          ) : null}
 
           <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>Priority: {task.priority || "medium"}</Text>
           <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>Category: {task.category || "Uncategorized"}</Text>
@@ -357,4 +366,10 @@ export default function TaskListScreen() {
       ))}
     </ScrollView>
   );
+}
+
+function getDueDateTime(dueDate: string) {
+  const dateTime = new Date(dueDate).getTime();
+
+  return Number.isNaN(dateTime) ? Number.MAX_SAFE_INTEGER : dateTime;
 }
