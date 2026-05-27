@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
+  completeTaskAndCreateNextTask,
   deleteTaskRecord,
   getRedeemedRewardIds,
   getTasks,
@@ -33,6 +34,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [categories, setCategories] = useState<string[]>(defaultCategories);
   const [redeemedRewardIds, setRedeemedRewardIds] = useState<string[]>([]);
   const generatedRecurringSourceIds = useRef(new Set<string>());
+  const completionInProgressIds = useRef(new Set<string>());
   const completedTaskCount = tasks.filter((task) => task.completed).length;
   const taskPoints = completedTaskCount * 5;
   const bonusPoints = bonusRewards
@@ -151,16 +153,22 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   const toggleTaskCompleted = async (id: string) => {
+    if (completionInProgressIds.current.has(id)) {
+      return;
+    }
+
     const task = tasks.find((item) => item.id === id);
     if (!task) {
       return;
     }
 
+    completionInProgressIds.current.add(id);
     const nextCompleted = !task.completed;
     const shouldCreateRecurringTask =
       nextCompleted &&
       !task.completed &&
       task.recurrence &&
+      !task.generatedNextTaskId &&
       !hasGeneratedRecurringTask(
         tasks,
         task,
@@ -178,7 +186,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       recurringTask
         ? [
             ...prev.map((item) =>
-              item.id === id ? { ...item, completed: nextCompleted } : item
+              item.id === id
+                ? {
+                    ...item,
+                    completed: nextCompleted,
+                    generatedNextTaskId: recurringTask.id,
+                  }
+                : item
             ),
             recurringTask,
           ]
@@ -188,12 +202,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
 
     try {
-      await setTaskCompleted(id, nextCompleted);
       if (recurringTask) {
-        await insertTask(recurringTask);
+        await completeTaskAndCreateNextTask(id, recurringTask);
+      } else {
+        await setTaskCompleted(id, nextCompleted);
       }
     } catch (error) {
       console.error("Failed to update recurring task completion in Firebase", error);
+    } finally {
+      completionInProgressIds.current.delete(id);
     }
   };
 
@@ -238,6 +255,7 @@ function createNextRecurringTask(task: Task): Task {
     createdDate,
     notificationId: null,
     generatedFromTaskId: task.id,
+    generatedNextTaskId: null,
     subtasks: (task.subtasks ?? []).map((subtask, index) => ({
       ...subtask,
       id: `${createdDate}-${index}`,
@@ -274,6 +292,10 @@ function hasGeneratedRecurringTask(
   generatedSourceIds: Set<string>
 ) {
   if (generatedSourceIds.has(task.id)) {
+    return true;
+  }
+
+  if (task.generatedNextTaskId) {
     return true;
   }
 

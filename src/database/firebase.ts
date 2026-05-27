@@ -11,6 +11,7 @@ import {
   query,
   setDoc,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import { RecurrenceFrequency, Subtask, Task, TaskPriority } from "../types/task";
 
@@ -34,6 +35,7 @@ type TaskDocument = {
   notificationId?: string | null;
   recurrence?: string | null;
   generatedFromTaskId?: string | null;
+  generatedNextTaskId?: string | null;
   subtasks?: SubtaskDocument[];
 };
 
@@ -138,6 +140,7 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     notificationId: data.notificationId ?? null,
     recurrence: normalizeRecurrence(data.recurrence),
     generatedFromTaskId: data.generatedFromTaskId ?? null,
+    generatedNextTaskId: data.generatedNextTaskId ?? null,
     subtasks: normalizeSubtasks(data.subtasks),
   };
 }
@@ -159,6 +162,7 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     notificationId: task.notificationId ?? null,
     recurrence: task.recurrence ?? null,
     generatedFromTaskId: task.generatedFromTaskId ?? null,
+    generatedNextTaskId: task.generatedNextTaskId ?? null,
     subtasks: normalizeSubtasks(task.subtasks),
   };
 }
@@ -200,6 +204,25 @@ export async function insertTask(task: Task) {
   }
 
   await setDoc(doc(firestore, "tasks", task.id), taskToDocument(task));
+}
+
+export async function completeTaskAndCreateNextTask(id: string, nextTask: Task) {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return;
+  }
+
+  const batch = writeBatch(firestore);
+
+  batch.update(doc(firestore, "tasks", id), {
+    completed: true,
+    status: "completed",
+    generatedNextTaskId: nextTask.id,
+  });
+  batch.set(doc(firestore, "tasks", nextTask.id), taskToDocument(nextTask));
+
+  await batch.commit();
 }
 
 export async function updateTaskRecord(id: string, updatedFields: Partial<Task>) {
