@@ -19,5 +19,6 @@ export type Task = {
   reminderTime: string;
   notificationId?: string | null;
   recurrence?: Exclude<RecurrenceFrequency, "none">;
+  generatedFromTaskId?: string | null;
   subtasks?: Subtask[];
 };

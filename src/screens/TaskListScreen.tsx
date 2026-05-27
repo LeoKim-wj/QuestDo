@@ -3,6 +3,15 @@ import { View, Text, Pressable, ScrollView, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import { useTasks } from "../context/TaskContext";
 import { cancelTaskNotification } from "../services/NotificationService";
+import { Task } from "../types/task";
+
+function formatRecurrence(recurrence: Task["recurrence"]) {
+  if (!recurrence) {
+    return "None";
+  }
+
+  return recurrence.charAt(0).toUpperCase() + recurrence.slice(1);
+}
 
 export default function TaskListScreen() {
   const router = useRouter();
@@ -229,6 +238,11 @@ export default function TaskListScreen() {
 
           <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>Priority: {task.priority || "medium"}</Text>
           <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>Category: {task.category || "Uncategorized"}</Text>
+          {task.recurrence ? (
+            <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>
+              Repeat: {formatRecurrence(task.recurrence)}
+            </Text>
+          ) : null}
 
           {task.description ? (
             <Text style={{ marginTop: 4, color: task.completed ? "#6b7280" : "#000" }}>{task.description}</Text>
