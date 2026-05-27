@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import {
   deleteTaskRecord,
   getRedeemedRewardIds,
@@ -32,6 +32,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
   const [redeemedRewardIds, setRedeemedRewardIds] = useState<string[]>([]);
+  const generatedRecurringSourceIds = useRef(new Set<string>());
   const completedTaskCount = tasks.filter((task) => task.completed).length;
   const taskPoints = completedTaskCount * 5;
   const bonusPoints = bonusRewards
@@ -151,18 +152,48 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const toggleTaskCompleted = async (id: string) => {
     const task = tasks.find((item) => item.id === id);
-    const nextCompleted = !task?.completed;
+    if (!task) {
+      return;
+    }
+
+    const nextCompleted = !task.completed;
+    const shouldCreateRecurringTask =
+      nextCompleted &&
+      !task.completed &&
+      task.recurrence &&
+      !hasGeneratedRecurringTask(
+        tasks,
+        task,
+        generatedRecurringSourceIds.current
+      );
+    const recurringTask = shouldCreateRecurringTask
+      ? createNextRecurringTask(task)
+      : null;
+
+    if (recurringTask) {
+      generatedRecurringSourceIds.current.add(task.id);
+    }
 
     setTasks((prev) =>
-      prev.map((task) =>
-        task.id === id ? { ...task, completed: nextCompleted } : task
-      )
+      recurringTask
+        ? [
+            ...prev.map((item) =>
+              item.id === id ? { ...item, completed: nextCompleted } : item
+            ),
+            recurringTask,
+          ]
+        : prev.map((item) =>
+            item.id === id ? { ...item, completed: nextCompleted } : item
+          )
     );
 
     try {
       await setTaskCompleted(id, nextCompleted);
+      if (recurringTask) {
+        await insertTask(recurringTask);
+      }
     } catch (error) {
-      console.error("Failed to update task completion in Firebase", error);
+      console.error("Failed to update recurring task completion in Firebase", error);
     }
   };
 
@@ -194,6 +225,69 @@ export function useTasks() {
   }
 
   return context;
+}
+
+function createNextRecurringTask(task: Task): Task {
+  const createdDate = new Date().toISOString();
+
+  return {
+    ...task,
+    id: `recurring-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    completed: false,
+    dueDate: getNextDueDate(task.dueDate, task.recurrence),
+    createdDate,
+    notificationId: null,
+    generatedFromTaskId: task.id,
+    subtasks: (task.subtasks ?? []).map((subtask, index) => ({
+      ...subtask,
+      id: `${createdDate}-${index}`,
+      completed: false,
+    })),
+  };
+}
+
+function getNextDueDate(dueDate: string, recurrence: Task["recurrence"]) {
+  const nextDate = new Date(dueDate);
+
+  if (Number.isNaN(nextDate.getTime())) {
+    return new Date().toISOString();
+  }
+
+  if (recurrence === "daily") {
+    nextDate.setDate(nextDate.getDate() + 1);
+  }
+
+  if (recurrence === "weekly") {
+    nextDate.setDate(nextDate.getDate() + 7);
+  }
+
+  if (recurrence === "monthly") {
+    nextDate.setMonth(nextDate.getMonth() + 1);
+  }
+
+  return nextDate.toISOString();
+}
+
+function hasGeneratedRecurringTask(
+  taskList: Task[],
+  task: Task,
+  generatedSourceIds: Set<string>
+) {
+  if (generatedSourceIds.has(task.id)) {
+    return true;
+  }
+
+  const nextDueDate = getNextDueDate(task.dueDate, task.recurrence);
+
+  return taskList.some(
+    (item) =>
+      item.id !== task.id &&
+      (item.generatedFromTaskId === task.id ||
+        (item.title === task.title &&
+          item.category === task.category &&
+          item.recurrence === task.recurrence &&
+          item.dueDate === nextDueDate))
+  );
 }
 
 function mergeCategories(currentCategories: string[], taskList: Task[]) {

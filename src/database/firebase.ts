@@ -33,6 +33,7 @@ type TaskDocument = {
   reminderTime?: string;
   notificationId?: string | null;
   recurrence?: string | null;
+  generatedFromTaskId?: string | null;
   subtasks?: SubtaskDocument[];
 };
 
@@ -136,6 +137,7 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     reminderTime: data.reminderTime ?? "",
     notificationId: data.notificationId ?? null,
     recurrence: normalizeRecurrence(data.recurrence),
+    generatedFromTaskId: data.generatedFromTaskId ?? null,
     subtasks: normalizeSubtasks(data.subtasks),
   };
 }
@@ -156,6 +158,7 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     reminderTime: task.reminderTime ?? "",
     notificationId: task.notificationId ?? null,
     recurrence: task.recurrence ?? null,
+    generatedFromTaskId: task.generatedFromTaskId ?? null,
     subtasks: normalizeSubtasks(task.subtasks),
   };
 }
