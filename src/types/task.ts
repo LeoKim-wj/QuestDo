@@ -20,5 +20,6 @@ export type Task = {
   notificationId?: string | null;
   recurrence?: Exclude<RecurrenceFrequency, "none">;
   generatedFromTaskId?: string | null;
+  generatedNextTaskId?: string | null;
   subtasks?: Subtask[];
 };
