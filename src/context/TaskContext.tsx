@@ -14,6 +14,7 @@ import {
 } from "../database/firebase";
 import { bonusRewards } from "../rewards/bonusRewards";
 import { cosmeticItems } from "../rewards/cosmeticItems";
+import { CosmeticType, EquippedCosmetics } from "../types/cosmetics";
 import { Task } from "../types/task";
 
 type TaskContextType = {
@@ -22,7 +23,7 @@ type TaskContextType = {
   totalPoints: number;
   redeemedRewardIds: string[];
   unlockedCosmeticIds: string[];
-  equippedCosmeticId: string | null;
+  equippedCosmetics: EquippedCosmetics;
   newlyUnlockedCosmeticId: string | null;
   addTask: (task: Task) => Promise<void>;
   addCategory: (category: string) => void;
@@ -30,25 +31,26 @@ type TaskContextType = {
   redeemBonusReward: (rewardId: string) => Promise<void>;
   updateTask: (id: string, updatedFields: Partial<Task>) => Promise<void>;
   toggleTaskCompleted: (id: string) => Promise<void>;
-  equipCosmetic: (id: string | null) => Promise<void>;
+  equipCosmetic: (type: CosmeticType, id: string | null) => Promise<void>;
   clearNewlyUnlocked: () => void;
 };
 
 const TaskContext = createContext<TaskContextType | null>(null);
 const defaultCategories = ["Study", "Work", "Personal"];
+const defaultEquipped: EquippedCosmetics = { accessory: null, furColor: null };
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
   const [redeemedRewardIds, setRedeemedRewardIds] = useState<string[]>([]);
   const [unlockedCosmeticIds, setUnlockedCosmeticIds] = useState<string[]>([]);
-  const [equippedCosmeticId, setEquippedCosmeticId] = useState<string | null>(null);
+  const [equippedCosmetics, setEquippedCosmetics] = useState<EquippedCosmetics>(defaultEquipped);
   const [newlyUnlockedCosmeticId, setNewlyUnlockedCosmeticId] = useState<string | null>(null);
   const generatedRecurringSourceIds = useRef(new Set<string>());
   const completionInProgressIds = useRef(new Set<string>());
   const initialCosmeticsLoaded = useRef(false);
-  const equippedCosmeticIdRef = useRef<string | null>(null);
-  equippedCosmeticIdRef.current = equippedCosmeticId;
+  const equippedCosmeticsRef = useRef<EquippedCosmetics>(defaultEquipped);
+  equippedCosmeticsRef.current = equippedCosmetics;
 
   const completedTaskCount = tasks.filter((task) => task.completed).length;
   const taskPoints = completedTaskCount * 5;
@@ -76,7 +78,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         setTasks(storedTasks);
         setRedeemedRewardIds(storedRedeemedRewardIds);
         setUnlockedCosmeticIds(cosmeticState.unlockedCosmeticIds);
-        setEquippedCosmeticId(cosmeticState.equippedCosmeticId);
+        setEquippedCosmetics(cosmeticState.equippedCosmetics);
         setCategories((prev) => mergeCategories(prev, storedTasks));
       } catch (error) {
         console.error("Failed to load tasks from Firebase", error);
@@ -110,7 +112,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     setUnlockedCosmeticIds(nextIds);
     setNewlyUnlockedCosmeticId(newIds[newIds.length - 1]);
 
-    saveCosmeticState(nextIds, equippedCosmeticIdRef.current).catch((err) =>
+    saveCosmeticState(nextIds, equippedCosmeticsRef.current).catch((err) =>
       console.error("Failed to save cosmetic state", err)
     );
   }, [totalPoints, unlockedCosmeticIds]);
@@ -257,11 +259,12 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const equipCosmetic = async (id: string | null) => {
-    setEquippedCosmeticId(id);
+  const equipCosmetic = async (type: CosmeticType, id: string | null) => {
+    const next: EquippedCosmetics = { ...equippedCosmeticsRef.current, [type]: id };
+    setEquippedCosmetics(next);
 
     try {
-      await saveCosmeticState(unlockedCosmeticIds, id);
+      await saveCosmeticState(unlockedCosmeticIds, next);
     } catch (error) {
       console.error("Failed to save equipped cosmetic", error);
     }
@@ -277,7 +280,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         totalPoints,
         redeemedRewardIds,
         unlockedCosmeticIds,
-        equippedCosmeticId,
+        equippedCosmetics,
         newlyUnlockedCosmeticId,
         addTask,
         addCategory,

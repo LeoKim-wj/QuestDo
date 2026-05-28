@@ -3,19 +3,37 @@ import { View, Text, StyleSheet } from "react-native";
 import { CosmeticItem } from "@/src/types/cosmetics";
 
 type Props = {
-  equippedCosmetic?: CosmeticItem | null;
+  equippedAccessory?: CosmeticItem | null;
+  furColor?: string | null;
   size?: "small" | "large";
 };
 
-export function BunnyMascot({ equippedCosmetic, size = "large" }: Props) {
+export function BunnyMascot({ equippedAccessory, furColor, size = "large" }: Props) {
   const isLarge = size === "large";
+  const circleSize = isLarge ? 96 : 54;
+  const bunnyFontSize = isLarge ? 56 : 32;
+  const accessoryFontSize = isLarge ? 30 : 18;
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.cosmeticSlot, isLarge ? styles.cosmeticLarge : styles.cosmeticSmall]}>
-        {equippedCosmetic ? equippedCosmetic.emoji : " "}
+      <Text
+        style={[styles.accessorySlot, { fontSize: accessoryFontSize, lineHeight: accessoryFontSize + 4 }]}
+      >
+        {equippedAccessory ? equippedAccessory.emoji : " "}
       </Text>
-      <Text style={isLarge ? styles.bunnyLarge : styles.bunnySmall}>🐰</Text>
+      <View
+        style={[
+          styles.bunnyCircle,
+          {
+            width: circleSize,
+            height: circleSize,
+            borderRadius: circleSize / 2,
+            backgroundColor: furColor ?? "transparent",
+          },
+        ]}
+      >
+        <Text style={{ fontSize: bunnyFontSize, lineHeight: bunnyFontSize + 8 }}>🐰</Text>
+      </View>
     </View>
   );
 }
@@ -24,24 +42,12 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
   },
-  cosmeticSlot: {
+  accessorySlot: {
     textAlign: "center",
-    lineHeight: 28,
+    marginBottom: -6,
   },
-  cosmeticLarge: {
-    fontSize: 28,
-    marginBottom: -4,
-  },
-  cosmeticSmall: {
-    fontSize: 16,
-    marginBottom: -2,
-  },
-  bunnyLarge: {
-    fontSize: 64,
-    lineHeight: 72,
-  },
-  bunnySmall: {
-    fontSize: 36,
-    lineHeight: 42,
+  bunnyCircle: {
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

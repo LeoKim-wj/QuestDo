@@ -7,14 +7,15 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useTasks } from "@/src/context/TaskContext";
-import { cosmeticItems } from "@/src/rewards/cosmeticItems";
+import { accessoryItems, furColorItems } from "@/src/rewards/cosmeticItems";
+import { CosmeticItem } from "@/src/types/cosmetics";
 import { BunnyMascot } from "@/components/BunnyMascot";
 
 export default function CosmeticsScreen() {
-  const { totalPoints, unlockedCosmeticIds, equippedCosmeticId, equipCosmetic } =
-    useTasks();
+  const { totalPoints, unlockedCosmeticIds, equippedCosmetics, equipCosmetic } = useTasks();
 
-  const equippedItem = cosmeticItems.find((item) => item.id === equippedCosmeticId) ?? null;
+  const equippedAccessory = accessoryItems.find((item) => item.id === equippedCosmetics.accessory) ?? null;
+  const equippedFurItem = furColorItems.find((item) => item.id === equippedCosmetics.furColor) ?? null;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -22,64 +23,114 @@ export default function CosmeticsScreen() {
       <Text style={styles.subtitle}>Dress up your bunny!</Text>
 
       <View style={styles.mascotCard}>
-        <BunnyMascot equippedCosmetic={equippedItem} size="large" />
-        <Text style={styles.equippedLabel}>
-          {equippedItem ? equippedItem.name : "No cosmetic equipped"}
-        </Text>
-        {equippedItem && (
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => equipCosmetic(null)}
-          >
-            <Text style={styles.removeButtonText}>Remove</Text>
-          </TouchableOpacity>
-        )}
+        <BunnyMascot
+          equippedAccessory={equippedAccessory}
+          furColor={equippedFurItem?.furColor}
+          size="large"
+        />
+        <View style={styles.equippedInfo}>
+          {equippedAccessory && (
+            <Text style={styles.equippedLabel}>
+              {equippedAccessory.emoji} {equippedAccessory.name}
+            </Text>
+          )}
+          {equippedFurItem && (
+            <Text style={styles.equippedLabel}>
+              {equippedFurItem.emoji} {equippedFurItem.name} fur
+            </Text>
+          )}
+          {!equippedAccessory && !equippedFurItem && (
+            <Text style={styles.equippedNone}>Plain bunny — unlock and equip cosmetics below!</Text>
+          )}
+        </View>
       </View>
 
       <View style={styles.pointsBadge}>
         <Text style={styles.pointsText}>{totalPoints} pts earned</Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Your Collection</Text>
-
+      {/* Accessories */}
+      <Text style={styles.sectionTitle}>Accessories</Text>
       <View style={styles.grid}>
-        {cosmeticItems.map((item) => {
-          const isUnlocked = unlockedCosmeticIds.includes(item.id);
-          const isEquipped = equippedCosmeticId === item.id;
+        {accessoryItems.map((item) => (
+          <CosmeticCard
+            key={item.id}
+            item={item}
+            isUnlocked={unlockedCosmeticIds.includes(item.id)}
+            isEquipped={equippedCosmetics.accessory === item.id}
+            onPress={() =>
+              equipCosmetic("accessory", equippedCosmetics.accessory === item.id ? null : item.id)
+            }
+          />
+        ))}
+      </View>
 
-          return (
-            <TouchableOpacity
-              key={item.id}
-              disabled={!isUnlocked}
-              activeOpacity={isUnlocked ? 0.7 : 1}
-              onPress={() => equipCosmetic(isEquipped ? null : item.id)}
-              style={[
-                styles.cosmeticCard,
-                isUnlocked ? styles.unlockedCard : styles.lockedCard,
-                isEquipped && styles.equippedCard,
-              ]}
-            >
-              <Text style={[styles.cosmeticEmoji, !isUnlocked && styles.dimmed]}>
-                {isUnlocked ? item.emoji : "🔒"}
-              </Text>
-              <Text
-                style={[styles.cosmeticName, !isUnlocked && styles.lockedText]}
-                numberOfLines={1}
-              >
-                {item.name}
-              </Text>
-              {isEquipped ? (
-                <Text style={styles.equippedBadge}>Equipped ✓</Text>
-              ) : isUnlocked ? (
-                <Text style={styles.unlockedBadge}>Tap to wear</Text>
-              ) : (
-                <Text style={styles.lockedBadge}>{item.pointsRequired} pts</Text>
-              )}
-            </TouchableOpacity>
-          );
-        })}
+      {/* Fur Colours */}
+      <Text style={styles.sectionTitle}>Fur Colours</Text>
+      <View style={styles.grid}>
+        {furColorItems.map((item) => (
+          <CosmeticCard
+            key={item.id}
+            item={item}
+            isUnlocked={unlockedCosmeticIds.includes(item.id)}
+            isEquipped={equippedCosmetics.furColor === item.id}
+            onPress={() =>
+              equipCosmetic("furColor", equippedCosmetics.furColor === item.id ? null : item.id)
+            }
+          />
+        ))}
       </View>
     </ScrollView>
+  );
+}
+
+function CosmeticCard({
+  item,
+  isUnlocked,
+  isEquipped,
+  onPress,
+}: {
+  item: CosmeticItem;
+  isUnlocked: boolean;
+  isEquipped: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      disabled={!isUnlocked}
+      activeOpacity={isUnlocked ? 0.7 : 1}
+      onPress={onPress}
+      style={[
+        styles.cosmeticCard,
+        isUnlocked ? styles.unlockedCard : styles.lockedCard,
+        isEquipped && styles.equippedCard,
+      ]}
+    >
+      {item.type === "furColor" ? (
+        <View
+          style={[
+            styles.furPreviewCircle,
+            { backgroundColor: isUnlocked ? (item.furColor ?? "#eee") : "#ddd" },
+          ]}
+        >
+          <Text style={styles.furPreviewBunny}>🐰</Text>
+        </View>
+      ) : (
+        <Text style={[styles.cosmeticEmoji, !isUnlocked && styles.dimmed]}>
+          {isUnlocked ? item.emoji : "🔒"}
+        </Text>
+      )}
+      <Text style={[styles.cosmeticName, !isUnlocked && styles.lockedText]} numberOfLines={1}>
+        {item.name}
+      </Text>
+      {isEquipped ? (
+        <Text style={styles.equippedBadge}>Equipped ✓</Text>
+      ) : isUnlocked ? (
+        <Text style={styles.unlockedBadge}>Tap to wear</Text>
+      ) : (
+        <Text style={styles.lockedBadge}>{item.pointsRequired} pts</Text>
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -112,25 +163,21 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 20,
     marginBottom: 16,
+    gap: 12,
+  },
+  equippedInfo: {
+    alignItems: "center",
+    gap: 4,
   },
   equippedLabel: {
-    marginTop: 10,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
     color: "#8a008a",
   },
-  removeButton: {
-    marginTop: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#8a008a",
-  },
-  removeButtonText: {
-    color: "#8a008a",
+  equippedNone: {
     fontSize: 13,
-    fontWeight: "600",
+    color: "#999",
+    textAlign: "center",
   },
   pointsBadge: {
     alignSelf: "flex-start",
@@ -149,11 +196,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginBottom: 12,
+    marginTop: 8,
   },
   grid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
+    marginBottom: 8,
   },
   cosmeticCard: {
     alignItems: "center",
@@ -161,6 +210,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     padding: 14,
     width: "47%",
+    gap: 4,
   },
   unlockedCard: {
     backgroundColor: "#faf0ff",
@@ -177,16 +227,25 @@ const styles = StyleSheet.create({
   cosmeticEmoji: {
     fontSize: 40,
     lineHeight: 48,
-    marginBottom: 6,
   },
   dimmed: {
     opacity: 0.4,
   },
+  furPreviewCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  furPreviewBunny: {
+    fontSize: 30,
+    lineHeight: 36,
+  },
   cosmeticName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 4,
   },
   lockedText: {
     color: "#aaa",

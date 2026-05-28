@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { router } from "expo-router";
 import { useTasks } from "@/src/context/TaskContext";
 import { bonusRewards } from "@/src/rewards/bonusRewards";
-import { cosmeticItems } from "@/src/rewards/cosmeticItems";
+import { cosmeticItems } from "@/src/rewards/cosmeticItems"; // used to resolve equipped items by id
 import { BunnyMascot } from "@/components/BunnyMascot";
 
 const toDateKey = (dateString: string) => new Date(dateString).toISOString().slice(0, 10);
@@ -17,10 +17,11 @@ const formatDate = (dateString: string) =>
   });
 
 export default function HomeScreen() {
-  const { tasks, totalPoints, redeemedRewardIds, redeemBonusReward, equippedCosmeticId } =
+  const { tasks, totalPoints, redeemedRewardIds, redeemBonusReward, equippedCosmetics } =
     useTasks();
 
-  const equippedCosmetic = cosmeticItems.find((item) => item.id === equippedCosmeticId) ?? null;
+  const equippedAccessory = cosmeticItems.find((item) => item.id === equippedCosmetics.accessory) ?? null;
+  const equippedFurItem = cosmeticItems.find((item) => item.id === equippedCosmetics.furColor) ?? null;
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
@@ -64,11 +65,19 @@ export default function HomeScreen() {
         onPress={() => router.push("/(tabs)/cosmetics")}
         activeOpacity={0.85}
       >
-        <BunnyMascot equippedCosmetic={equippedCosmetic} size="small" />
+        <BunnyMascot
+          equippedAccessory={equippedAccessory}
+          furColor={equippedFurItem?.furColor}
+          size="small"
+        />
         <View style={styles.mascotInfo}>
           <Text style={styles.mascotName}>Your Bunny</Text>
           <Text style={styles.mascotHint}>
-            {equippedCosmetic ? `Wearing: ${equippedCosmetic.emoji} ${equippedCosmetic.name}` : "Tap to customise →"}
+            {equippedAccessory || equippedFurItem
+              ? [equippedAccessory?.name, equippedFurItem && `${equippedFurItem.name} fur`]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "Tap to customise →"}
           </Text>
         </View>
       </TouchableOpacity>

@@ -13,6 +13,7 @@ import {
   updateDoc,
   writeBatch,
 } from "firebase/firestore";
+import { EquippedCosmetics } from "../types/cosmetics";
 import { RecurrenceFrequency, Subtask, Task, TaskPriority } from "../types/task";
 
 type SubtaskDocument = {
@@ -45,6 +46,8 @@ type RewardStateDocument = {
 
 type CosmeticStateDocument = {
   unlockedCosmeticIds?: string[];
+  equippedCosmetics?: { accessory?: string | null; furColor?: string | null };
+  // Legacy field — migrated to equippedCosmetics.accessory on read
   equippedCosmeticId?: string | null;
 };
 
@@ -309,28 +312,36 @@ export async function saveRedeemedRewardIds(redeemedRewardIds: string[]) {
   );
 }
 
-export async function getCosmeticState(): Promise<{ unlockedCosmeticIds: string[]; equippedCosmeticId: string | null }> {
+export async function getCosmeticState(): Promise<{ unlockedCosmeticIds: string[]; equippedCosmetics: EquippedCosmetics }> {
   const firestore = getTaskDatabase();
 
+  const defaultState = { unlockedCosmeticIds: [], equippedCosmetics: { accessory: null, furColor: null } };
+
   if (!firestore) {
-    return { unlockedCosmeticIds: [], equippedCosmeticId: null };
+    return defaultState;
   }
 
   const snapshot = await getDoc(getCosmeticStateDocument(firestore));
 
   if (!snapshot.exists()) {
-    return { unlockedCosmeticIds: [], equippedCosmeticId: null };
+    return defaultState;
   }
 
   const data = snapshot.data() as CosmeticStateDocument;
+  const legacyAccessory = data.equippedCosmeticId ?? null;
+
+  const equippedCosmetics: EquippedCosmetics = {
+    accessory: data.equippedCosmetics?.accessory ?? legacyAccessory,
+    furColor: data.equippedCosmetics?.furColor ?? null,
+  };
 
   return {
     unlockedCosmeticIds: Array.isArray(data.unlockedCosmeticIds) ? data.unlockedCosmeticIds : [],
-    equippedCosmeticId: data.equippedCosmeticId ?? null,
+    equippedCosmetics,
   };
 }
 
-export async function saveCosmeticState(unlockedCosmeticIds: string[], equippedCosmeticId: string | null) {
+export async function saveCosmeticState(unlockedCosmeticIds: string[], equippedCosmetics: EquippedCosmetics) {
   const firestore = getTaskDatabase();
 
   if (!firestore) {
@@ -339,7 +350,7 @@ export async function saveCosmeticState(unlockedCosmeticIds: string[], equippedC
 
   await setDoc(
     getCosmeticStateDocument(firestore),
-    { unlockedCosmeticIds, equippedCosmeticId },
+    { unlockedCosmeticIds, equippedCosmetics },
     { merge: true }
   );
 }
