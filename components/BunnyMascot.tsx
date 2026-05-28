@@ -19,23 +19,21 @@ export function BunnyMascot({ equippedAccessory, furColor, size = "large" }: Pro
   return (
     <View style={styles.container}>
       <Text
-        style={{ fontSize: accessoryFontSize, lineHeight: accessoryFontSize + 4, textAlign: "center", marginBottom: -8 }}
+        style={{
+          fontSize: accessoryFontSize,
+          lineHeight: accessoryFontSize + 4,
+          textAlign: "center",
+          marginBottom: -8,
+        }}
       >
         {equippedAccessory ? equippedAccessory.emoji : " "}
       </Text>
-      <View
-        style={[
-          styles.imageWrapper,
-          { width: imageSize, height: imageSize, borderRadius: imageSize / 2 },
-          furColor ? { backgroundColor: furColor } : null,
-        ]}
-      >
-        <Image
-          source={bunnySource}
-          style={{ width: imageSize, height: imageSize }}
-          contentFit="contain"
-        />
-      </View>
+      <Image
+        source={bunnySource}
+        style={{ width: imageSize, height: imageSize }}
+        contentFit="contain"
+        tintColor={furColor ?? undefined}
+      />
     </View>
   );
 }
@@ -43,10 +41,5 @@ export function BunnyMascot({ equippedAccessory, furColor, size = "large" }: Pro
 const styles = StyleSheet.create({
   container: {
     alignItems: "center",
-  },
-  imageWrapper: {
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
   },
 });

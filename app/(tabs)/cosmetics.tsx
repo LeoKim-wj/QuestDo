@@ -10,6 +10,9 @@ import { useTasks } from "@/src/context/TaskContext";
 import { accessoryItems, furColorItems } from "@/src/rewards/cosmeticItems";
 import { CosmeticItem } from "@/src/types/cosmetics";
 import { BunnyMascot } from "@/components/BunnyMascot";
+import { Image } from "expo-image";
+
+const bunnySource = require("@/assets/images/bunny-mascot.png");
 
 export default function CosmeticsScreen() {
   const { totalPoints, unlockedCosmeticIds, equippedCosmetics, equipCosmetic } = useTasks();
@@ -107,14 +110,12 @@ function CosmeticCard({
       ]}
     >
       {item.type === "furColor" ? (
-        <View
-          style={[
-            styles.furPreviewCircle,
-            { backgroundColor: isUnlocked ? (item.furColor ?? "#eee") : "#ddd" },
-          ]}
-        >
-          <Text style={styles.furPreviewBunny}>🐰</Text>
-        </View>
+        <Image
+          source={bunnySource}
+          style={[styles.furPreviewBunny, !isUnlocked && styles.dimmed]}
+          contentFit="contain"
+          tintColor={isUnlocked ? item.furColor : "#ccc"}
+        />
       ) : (
         <Text style={[styles.cosmeticEmoji, !isUnlocked && styles.dimmed]}>
           {isUnlocked ? item.emoji : "🔒"}
@@ -231,16 +232,9 @@ const styles = StyleSheet.create({
   dimmed: {
     opacity: 0.4,
   },
-  furPreviewCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   furPreviewBunny: {
-    fontSize: 30,
-    lineHeight: 36,
+    width: 52,
+    height: 52,
   },
   cosmeticName: {
     fontSize: 13,
