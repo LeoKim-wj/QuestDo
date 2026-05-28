@@ -4,6 +4,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { router } from "expo-router";
 import { useTasks } from "@/src/context/TaskContext";
 import { bonusRewards } from "@/src/rewards/bonusRewards";
+import { cosmeticItems } from "@/src/rewards/cosmeticItems";
+import { BunnyMascot } from "@/components/BunnyMascot";
 
 const toDateKey = (dateString: string) => new Date(dateString).toISOString().slice(0, 10);
 
@@ -15,7 +17,10 @@ const formatDate = (dateString: string) =>
   });
 
 export default function HomeScreen() {
-  const { tasks, totalPoints, redeemedRewardIds, redeemBonusReward } = useTasks();
+  const { tasks, totalPoints, redeemedRewardIds, redeemBonusReward, equippedCosmeticId } =
+    useTasks();
+
+  const equippedCosmetic = cosmeticItems.find((item) => item.id === equippedCosmeticId) ?? null;
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
@@ -54,6 +59,20 @@ export default function HomeScreen() {
       <Text style={styles.time}>{currentTime}</Text>
 
     
+      <TouchableOpacity
+        style={styles.mascotCard}
+        onPress={() => router.push("/(tabs)/cosmetics")}
+        activeOpacity={0.85}
+      >
+        <BunnyMascot equippedCosmetic={equippedCosmetic} size="small" />
+        <View style={styles.mascotInfo}>
+          <Text style={styles.mascotName}>Your Bunny</Text>
+          <Text style={styles.mascotHint}>
+            {equippedCosmetic ? `Wearing: ${equippedCosmetic.emoji} ${equippedCosmetic.name}` : "Tap to customise →"}
+          </Text>
+        </View>
+      </TouchableOpacity>
+
       <View style={styles.statsRow}>
         <View style={[styles.streakBox, { flex: 1 }]}>
           <Text style={styles.streakTitle}>Current Streak</Text>
@@ -213,6 +232,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#8a008a",
     marginBottom: 20,
+  },
+  mascotCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#faf0ff",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#e6b3e6",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 16,
+    gap: 14,
+  },
+  mascotInfo: {
+    flex: 1,
+  },
+  mascotName: {
+    fontWeight: "bold",
+    fontSize: 15,
+    color: "#8a008a",
+  },
+  mascotHint: {
+    fontSize: 12,
+    color: "#666",
+    marginTop: 2,
   },
   statsRow: {
     flexDirection: "row",

@@ -19,6 +19,7 @@ const MAPPING = {
   'chart.bar.fill': 'bar-chart',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
+  'star.fill': 'star',
 } as IconMapping;
 
 /**

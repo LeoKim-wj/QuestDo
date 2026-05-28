@@ -2,15 +2,18 @@ import React, { createContext, useContext, useEffect, useRef, useState } from "r
 import {
   completeTaskAndCreateNextTask,
   deleteTaskRecord,
+  getCosmeticState,
   getRedeemedRewardIds,
   getTasks,
   initializeFirebase,
   insertTask,
+  saveCosmeticState,
   saveRedeemedRewardIds,
   setTaskCompleted,
   updateTaskRecord,
 } from "../database/firebase";
 import { bonusRewards } from "../rewards/bonusRewards";
+import { cosmeticItems } from "../rewards/cosmeticItems";
 import { Task } from "../types/task";
 
 type TaskContextType = {
@@ -18,12 +21,17 @@ type TaskContextType = {
   categories: string[];
   totalPoints: number;
   redeemedRewardIds: string[];
+  unlockedCosmeticIds: string[];
+  equippedCosmeticId: string | null;
+  newlyUnlockedCosmeticId: string | null;
   addTask: (task: Task) => Promise<void>;
   addCategory: (category: string) => void;
   deleteTask: (id: string) => Promise<void>;
   redeemBonusReward: (rewardId: string) => Promise<void>;
   updateTask: (id: string, updatedFields: Partial<Task>) => Promise<void>;
   toggleTaskCompleted: (id: string) => Promise<void>;
+  equipCosmetic: (id: string | null) => Promise<void>;
+  clearNewlyUnlocked: () => void;
 };
 
 const TaskContext = createContext<TaskContextType | null>(null);
@@ -33,8 +41,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
   const [redeemedRewardIds, setRedeemedRewardIds] = useState<string[]>([]);
+  const [unlockedCosmeticIds, setUnlockedCosmeticIds] = useState<string[]>([]);
+  const [equippedCosmeticId, setEquippedCosmeticId] = useState<string | null>(null);
+  const [newlyUnlockedCosmeticId, setNewlyUnlockedCosmeticId] = useState<string | null>(null);
   const generatedRecurringSourceIds = useRef(new Set<string>());
   const completionInProgressIds = useRef(new Set<string>());
+  const initialCosmeticsLoaded = useRef(false);
+  const equippedCosmeticIdRef = useRef<string | null>(null);
+  equippedCosmeticIdRef.current = equippedCosmeticId;
+
   const completedTaskCount = tasks.filter((task) => task.completed).length;
   const taskPoints = completedTaskCount * 5;
   const bonusPoints = bonusRewards
@@ -48,9 +63,10 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     const loadTasks = async () => {
       try {
         await initializeFirebase();
-        const [storedTasks, storedRedeemedRewardIds] = await Promise.all([
+        const [storedTasks, storedRedeemedRewardIds, cosmeticState] = await Promise.all([
           getTasks(),
           getRedeemedRewardIds(),
+          getCosmeticState(),
         ]);
 
         if (!isMounted) {
@@ -59,9 +75,15 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
         setTasks(storedTasks);
         setRedeemedRewardIds(storedRedeemedRewardIds);
+        setUnlockedCosmeticIds(cosmeticState.unlockedCosmeticIds);
+        setEquippedCosmeticId(cosmeticState.equippedCosmeticId);
         setCategories((prev) => mergeCategories(prev, storedTasks));
       } catch (error) {
         console.error("Failed to load tasks from Firebase", error);
+      } finally {
+        if (isMounted) {
+          initialCosmeticsLoaded.current = true;
+        }
       }
     };
 
@@ -71,6 +93,27 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       isMounted = false;
     };
   }, []);
+
+  // Auto-unlock cosmetics when points reach thresholds
+  useEffect(() => {
+    if (!initialCosmeticsLoaded.current) return;
+
+    const newlyUnlocked = cosmeticItems.filter(
+      (item) => totalPoints >= item.pointsRequired && !unlockedCosmeticIds.includes(item.id)
+    );
+
+    if (newlyUnlocked.length === 0) return;
+
+    const newIds = newlyUnlocked.map((item) => item.id);
+    const nextIds = [...unlockedCosmeticIds, ...newIds];
+
+    setUnlockedCosmeticIds(nextIds);
+    setNewlyUnlockedCosmeticId(newIds[newIds.length - 1]);
+
+    saveCosmeticState(nextIds, equippedCosmeticIdRef.current).catch((err) =>
+      console.error("Failed to save cosmetic state", err)
+    );
+  }, [totalPoints, unlockedCosmeticIds]);
 
   const addTask = async (task: Task) => {
     const taskWithCreatedDate = {
@@ -214,6 +257,18 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const equipCosmetic = async (id: string | null) => {
+    setEquippedCosmeticId(id);
+
+    try {
+      await saveCosmeticState(unlockedCosmeticIds, id);
+    } catch (error) {
+      console.error("Failed to save equipped cosmetic", error);
+    }
+  };
+
+  const clearNewlyUnlocked = () => setNewlyUnlockedCosmeticId(null);
+
   return (
     <TaskContext.Provider
       value={{
@@ -221,12 +276,17 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         categories,
         totalPoints,
         redeemedRewardIds,
+        unlockedCosmeticIds,
+        equippedCosmeticId,
+        newlyUnlockedCosmeticId,
         addTask,
         addCategory,
         deleteTask,
         redeemBonusReward,
         updateTask,
         toggleTaskCompleted,
+        equipCosmetic,
+        clearNewlyUnlocked,
       }}
     >
       {children}

@@ -43,6 +43,11 @@ type RewardStateDocument = {
   redeemedRewardIds?: string[];
 };
 
+type CosmeticStateDocument = {
+  unlockedCosmeticIds?: string[];
+  equippedCosmeticId?: string | null;
+};
+
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -94,6 +99,10 @@ function getTasksCollection(firestore: Firestore) {
 
 function getRewardStateDocument(firestore: Firestore) {
   return doc(firestore, "rewardState", "currentUser");
+}
+
+function getCosmeticStateDocument(firestore: Firestore) {
+  return doc(firestore, "cosmeticState", "currentUser");
 }
 
 function normalizePriority(priority?: string): TaskPriority {
@@ -296,6 +305,41 @@ export async function saveRedeemedRewardIds(redeemedRewardIds: string[]) {
   await setDoc(
     getRewardStateDocument(firestore),
     { redeemedRewardIds },
+    { merge: true }
+  );
+}
+
+export async function getCosmeticState(): Promise<{ unlockedCosmeticIds: string[]; equippedCosmeticId: string | null }> {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return { unlockedCosmeticIds: [], equippedCosmeticId: null };
+  }
+
+  const snapshot = await getDoc(getCosmeticStateDocument(firestore));
+
+  if (!snapshot.exists()) {
+    return { unlockedCosmeticIds: [], equippedCosmeticId: null };
+  }
+
+  const data = snapshot.data() as CosmeticStateDocument;
+
+  return {
+    unlockedCosmeticIds: Array.isArray(data.unlockedCosmeticIds) ? data.unlockedCosmeticIds : [],
+    equippedCosmeticId: data.equippedCosmeticId ?? null,
+  };
+}
+
+export async function saveCosmeticState(unlockedCosmeticIds: string[], equippedCosmeticId: string | null) {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return;
+  }
+
+  await setDoc(
+    getCosmeticStateDocument(firestore),
+    { unlockedCosmeticIds, equippedCosmeticId },
     { merge: true }
   );
 }
