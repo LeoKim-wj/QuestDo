@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { router } from "expo-router";
 import { useTasks } from "@/src/context/TaskContext";
 import { bonusRewards } from "@/src/rewards/bonusRewards";
-import { cosmeticItems } from "@/src/rewards/cosmeticItems"; // used to resolve equipped items by id
+import { cosmeticItems, backgroundItems } from "@/src/rewards/cosmeticItems";
 import { BunnyMascot } from "@/components/BunnyMascot";
 
 const toDateKey = (dateString: string) => new Date(dateString).toISOString().slice(0, 10);
@@ -22,6 +22,10 @@ export default function HomeScreen() {
 
   const equippedAccessory = cosmeticItems.find((item) => item.id === equippedCosmetics.accessory) ?? null;
   const equippedFurItem = cosmeticItems.find((item) => item.id === equippedCosmetics.furColor) ?? null;
+  const equippedBgItem = backgroundItems.find((item) => item.id === equippedCosmetics.background) ?? null;
+
+  const cardBg = equippedBgItem?.bgColor ?? "#faf0ff";
+  const isDarkCard = equippedBgItem?.bgColor ? isColorDark(equippedBgItem.bgColor) : false;
 
   const now = new Date();
   const todayKey = now.toISOString().slice(0, 10);
@@ -61,7 +65,7 @@ export default function HomeScreen() {
 
     
       <TouchableOpacity
-        style={styles.mascotCard}
+        style={[styles.mascotCard, { backgroundColor: cardBg, borderColor: isDarkCard ? "transparent" : "#e6b3e6" }]}
         onPress={() => router.push("/(tabs)/cosmetics")}
         activeOpacity={0.85}
       >
@@ -71,10 +75,14 @@ export default function HomeScreen() {
           size="small"
         />
         <View style={styles.mascotInfo}>
-          <Text style={styles.mascotName}>Your Bunny</Text>
-          <Text style={styles.mascotHint}>
-            {equippedAccessory || equippedFurItem
-              ? [equippedAccessory?.name, equippedFurItem && `${equippedFurItem.name} fur`]
+          <Text style={[styles.mascotName, isDarkCard && { color: "#fff" }]}>Your Bunny</Text>
+          <Text style={[styles.mascotHint, isDarkCard && { color: "rgba(255,255,255,0.7)" }]}>
+            {equippedAccessory || equippedFurItem || equippedBgItem
+              ? [
+                  equippedAccessory?.name,
+                  equippedFurItem && `${equippedFurItem.name} fur`,
+                  equippedBgItem?.name,
+                ]
                   .filter(Boolean)
                   .join(" · ")
               : "Tap to customise →"}
@@ -217,6 +225,13 @@ export default function HomeScreen() {
   );
 }
 
+function isColorDark(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -245,10 +260,8 @@ const styles = StyleSheet.create({
   mascotCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#faf0ff",
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#e6b3e6",
     paddingHorizontal: 16,
     paddingVertical: 12,
     marginBottom: 16,

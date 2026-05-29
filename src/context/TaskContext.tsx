@@ -37,7 +37,7 @@ type TaskContextType = {
 
 const TaskContext = createContext<TaskContextType | null>(null);
 const defaultCategories = ["Study", "Work", "Personal"];
-const defaultEquipped: EquippedCosmetics = { accessory: null, furColor: null };
+const defaultEquipped: EquippedCosmetics = { accessory: null, furColor: null, background: null };
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);

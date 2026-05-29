@@ -315,7 +315,7 @@ export async function saveRedeemedRewardIds(redeemedRewardIds: string[]) {
 export async function getCosmeticState(): Promise<{ unlockedCosmeticIds: string[]; equippedCosmetics: EquippedCosmetics }> {
   const firestore = getTaskDatabase();
 
-  const defaultState = { unlockedCosmeticIds: [], equippedCosmetics: { accessory: null, furColor: null } };
+  const defaultState = { unlockedCosmeticIds: [], equippedCosmetics: { accessory: null, furColor: null, background: null } };
 
   if (!firestore) {
     return defaultState;
@@ -333,6 +333,7 @@ export async function getCosmeticState(): Promise<{ unlockedCosmeticIds: string[
   const equippedCosmetics: EquippedCosmetics = {
     accessory: data.equippedCosmetics?.accessory ?? legacyAccessory,
     furColor: data.equippedCosmetics?.furColor ?? null,
+    background: data.equippedCosmetics?.background ?? null,
   };
 
   return {

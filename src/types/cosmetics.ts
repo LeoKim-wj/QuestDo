@@ -1,4 +1,4 @@
-export type CosmeticType = "accessory" | "furColor";
+export type CosmeticType = "accessory" | "furColor" | "background";
 
 export type CosmeticItem = {
   id: string;
@@ -7,10 +7,12 @@ export type CosmeticItem = {
   emoji: string;
   pointsRequired: number;
   type: CosmeticType;
-  furColor?: string; // hex color — only present for furColor type
+  furColor?: string; // hex — only for furColor type
+  bgColor?: string;  // hex — only for background type
 };
 
 export type EquippedCosmetics = {
   accessory: string | null;
   furColor: string | null;
+  background: string | null;
 };

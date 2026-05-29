@@ -105,7 +105,55 @@ export const cosmeticItems: CosmeticItem[] = [
     type: "furColor",
     furColor: "#9B59B6",
   },
+
+  // ── Backgrounds ──────────────────────────────────────────────────────────
+  {
+    id: "bg-mint",
+    name: "Mint Garden",
+    description: "A fresh and calming backdrop",
+    emoji: "🌿",
+    pointsRequired: 28,
+    type: "background",
+    bgColor: "#C8F7C5",
+  },
+  {
+    id: "bg-lavender",
+    name: "Lavender Dusk",
+    description: "Soft, dreamy, and relaxing",
+    emoji: "🪻",
+    pointsRequired: 58,
+    type: "background",
+    bgColor: "#E8D5F5",
+  },
+  {
+    id: "bg-ocean",
+    name: "Ocean Breeze",
+    description: "As calm as the open sea",
+    emoji: "🌊",
+    pointsRequired: 90,
+    type: "background",
+    bgColor: "#C5E8F7",
+  },
+  {
+    id: "bg-sunset",
+    name: "Sunset Glow",
+    description: "Warm golden hour vibes",
+    emoji: "🌅",
+    pointsRequired: 125,
+    type: "background",
+    bgColor: "#FFE4C4",
+  },
+  {
+    id: "bg-night",
+    name: "Night Sky",
+    description: "For the late-night achiever",
+    emoji: "🌙",
+    pointsRequired: 175,
+    type: "background",
+    bgColor: "#1E1E3F",
+  },
 ];
 
 export const accessoryItems = cosmeticItems.filter((item) => item.type === "accessory");
 export const furColorItems = cosmeticItems.filter((item) => item.type === "furColor");
+export const backgroundItems = cosmeticItems.filter((item) => item.type === "background");

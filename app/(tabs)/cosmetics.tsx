@@ -7,25 +7,34 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { useTasks } from "@/src/context/TaskContext";
-import { accessoryItems, furColorItems } from "@/src/rewards/cosmeticItems";
+import { accessoryItems, backgroundItems, furColorItems } from "@/src/rewards/cosmeticItems";
 import { CosmeticItem } from "@/src/types/cosmetics";
 import { BunnyMascot } from "@/components/BunnyMascot";
 import { Image } from "expo-image";
 
 const bunnySource = require("@/assets/images/bunny-mascot.png");
 
+const DEFAULT_CARD_BG = "#faf0ff";
+const DEFAULT_CARD_BORDER = "#e6b3e6";
+
 export default function CosmeticsScreen() {
   const { totalPoints, unlockedCosmeticIds, equippedCosmetics, equipCosmetic } = useTasks();
 
   const equippedAccessory = accessoryItems.find((item) => item.id === equippedCosmetics.accessory) ?? null;
   const equippedFurItem = furColorItems.find((item) => item.id === equippedCosmetics.furColor) ?? null;
+  const equippedBgItem = backgroundItems.find((item) => item.id === equippedCosmetics.background) ?? null;
+
+  const cardBg = equippedBgItem?.bgColor ?? DEFAULT_CARD_BG;
+  const isDarkBg = equippedBgItem?.bgColor ? isColorDark(equippedBgItem.bgColor) : false;
+  const labelColor = isDarkBg ? "#fff" : "#8a008a";
+  const noneColor = isDarkBg ? "rgba(255,255,255,0.6)" : "#999";
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Cosmetics</Text>
       <Text style={styles.subtitle}>Dress up your bunny!</Text>
 
-      <View style={styles.mascotCard}>
+      <View style={[styles.mascotCard, { backgroundColor: cardBg, borderColor: isDarkBg ? "transparent" : DEFAULT_CARD_BORDER }]}>
         <BunnyMascot
           equippedAccessory={equippedAccessory}
           furColor={equippedFurItem?.furColor}
@@ -33,17 +42,24 @@ export default function CosmeticsScreen() {
         />
         <View style={styles.equippedInfo}>
           {equippedAccessory && (
-            <Text style={styles.equippedLabel}>
+            <Text style={[styles.equippedLabel, { color: labelColor }]}>
               {equippedAccessory.emoji} {equippedAccessory.name}
             </Text>
           )}
           {equippedFurItem && (
-            <Text style={styles.equippedLabel}>
+            <Text style={[styles.equippedLabel, { color: labelColor }]}>
               {equippedFurItem.emoji} {equippedFurItem.name} fur
             </Text>
           )}
-          {!equippedAccessory && !equippedFurItem && (
-            <Text style={styles.equippedNone}>Plain bunny — unlock and equip cosmetics below!</Text>
+          {equippedBgItem && (
+            <Text style={[styles.equippedLabel, { color: labelColor }]}>
+              {equippedBgItem.emoji} {equippedBgItem.name}
+            </Text>
+          )}
+          {!equippedAccessory && !equippedFurItem && !equippedBgItem && (
+            <Text style={[styles.equippedNone, { color: noneColor }]}>
+              Plain bunny — unlock and equip cosmetics below!
+            </Text>
           )}
         </View>
       </View>
@@ -83,6 +99,22 @@ export default function CosmeticsScreen() {
           />
         ))}
       </View>
+
+      {/* Backgrounds */}
+      <Text style={styles.sectionTitle}>Backgrounds</Text>
+      <View style={styles.grid}>
+        {backgroundItems.map((item) => (
+          <CosmeticCard
+            key={item.id}
+            item={item}
+            isUnlocked={unlockedCosmeticIds.includes(item.id)}
+            isEquipped={equippedCosmetics.background === item.id}
+            onPress={() =>
+              equipCosmetic("background", equippedCosmetics.background === item.id ? null : item.id)
+            }
+          />
+        ))}
+      </View>
     </ScrollView>
   );
 }
@@ -112,10 +144,20 @@ function CosmeticCard({
       {item.type === "furColor" ? (
         <Image
           source={bunnySource}
-          style={[styles.furPreviewBunny, !isUnlocked && styles.dimmed]}
+          style={[styles.previewBunny, !isUnlocked && styles.dimmed]}
           contentFit="contain"
           tintColor={isUnlocked ? item.furColor : "#ccc"}
         />
+      ) : item.type === "background" ? (
+        <View
+          style={[
+            styles.bgPreview,
+            { backgroundColor: isUnlocked ? item.bgColor : "#ddd" },
+            !isUnlocked && styles.dimmed,
+          ]}
+        >
+          <Image source={bunnySource} style={styles.bgPreviewBunny} contentFit="contain" />
+        </View>
       ) : (
         <Text style={[styles.cosmeticEmoji, !isUnlocked && styles.dimmed]}>
           {isUnlocked ? item.emoji : "🔒"}
@@ -127,12 +169,19 @@ function CosmeticCard({
       {isEquipped ? (
         <Text style={styles.equippedBadge}>Equipped ✓</Text>
       ) : isUnlocked ? (
-        <Text style={styles.unlockedBadge}>Tap to wear</Text>
+        <Text style={styles.unlockedBadge}>Tap to use</Text>
       ) : (
         <Text style={styles.lockedBadge}>{item.pointsRequired} pts</Text>
       )}
     </TouchableOpacity>
   );
+}
+
+function isColorDark(hex: string): boolean {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 < 128;
 }
 
 const styles = StyleSheet.create({
@@ -157,10 +206,8 @@ const styles = StyleSheet.create({
   },
   mascotCard: {
     alignItems: "center",
-    backgroundColor: "#faf0ff",
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: "#e6b3e6",
     paddingVertical: 24,
     paddingHorizontal: 20,
     marginBottom: 16,
@@ -173,11 +220,9 @@ const styles = StyleSheet.create({
   equippedLabel: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#8a008a",
   },
   equippedNone: {
     fontSize: 13,
-    color: "#999",
     textAlign: "center",
   },
   pointsBadge: {
@@ -232,9 +277,20 @@ const styles = StyleSheet.create({
   dimmed: {
     opacity: 0.4,
   },
-  furPreviewBunny: {
+  previewBunny: {
     width: 52,
     height: 52,
+  },
+  bgPreview: {
+    width: 60,
+    height: 52,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bgPreviewBunny: {
+    width: 36,
+    height: 36,
   },
   cosmeticName: {
     fontSize: 13,
