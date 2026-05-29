@@ -13,6 +13,7 @@ import {
   updateDoc,
   writeBatch,
 } from "firebase/firestore";
+import { EquippedCosmetics } from "../types/cosmetics";
 import { RecurrenceFrequency, Subtask, Task, TaskPriority } from "../types/task";
 
 type SubtaskDocument = {
@@ -41,6 +42,13 @@ type TaskDocument = {
 
 type RewardStateDocument = {
   redeemedRewardIds?: string[];
+};
+
+type CosmeticStateDocument = {
+  unlockedCosmeticIds?: string[];
+  equippedCosmetics?: { accessory?: string | null; furColor?: string | null };
+  // Legacy field — migrated to equippedCosmetics.accessory on read
+  equippedCosmeticId?: string | null;
 };
 
 const firebaseConfig = {
@@ -94,6 +102,10 @@ function getTasksCollection(firestore: Firestore) {
 
 function getRewardStateDocument(firestore: Firestore) {
   return doc(firestore, "rewardState", "currentUser");
+}
+
+function getCosmeticStateDocument(firestore: Firestore) {
+  return doc(firestore, "cosmeticState", "currentUser");
 }
 
 function normalizePriority(priority?: string): TaskPriority {
@@ -296,6 +308,50 @@ export async function saveRedeemedRewardIds(redeemedRewardIds: string[]) {
   await setDoc(
     getRewardStateDocument(firestore),
     { redeemedRewardIds },
+    { merge: true }
+  );
+}
+
+export async function getCosmeticState(): Promise<{ unlockedCosmeticIds: string[]; equippedCosmetics: EquippedCosmetics }> {
+  const firestore = getTaskDatabase();
+
+  const defaultState = { unlockedCosmeticIds: [], equippedCosmetics: { accessory: null, furColor: null, background: null } };
+
+  if (!firestore) {
+    return defaultState;
+  }
+
+  const snapshot = await getDoc(getCosmeticStateDocument(firestore));
+
+  if (!snapshot.exists()) {
+    return defaultState;
+  }
+
+  const data = snapshot.data() as CosmeticStateDocument;
+  const legacyAccessory = data.equippedCosmeticId ?? null;
+
+  const equippedCosmetics: EquippedCosmetics = {
+    accessory: data.equippedCosmetics?.accessory ?? legacyAccessory,
+    furColor: data.equippedCosmetics?.furColor ?? null,
+    background: data.equippedCosmetics?.background ?? null,
+  };
+
+  return {
+    unlockedCosmeticIds: Array.isArray(data.unlockedCosmeticIds) ? data.unlockedCosmeticIds : [],
+    equippedCosmetics,
+  };
+}
+
+export async function saveCosmeticState(unlockedCosmeticIds: string[], equippedCosmetics: EquippedCosmetics) {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return;
+  }
+
+  await setDoc(
+    getCosmeticStateDocument(firestore),
+    { unlockedCosmeticIds, equippedCosmetics },
     { merge: true }
   );
 }
