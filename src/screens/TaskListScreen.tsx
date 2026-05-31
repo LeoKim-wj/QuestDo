@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { View, Text, Pressable, ScrollView, Animated } from "react-native";
+import { View, Text, Pressable, ScrollView, Animated, TextInput } from "react-native";
 import { useRouter } from "expo-router";
 import { useTasks } from "../context/TaskContext";
 import { cancelTaskNotification } from "../services/NotificationService";
@@ -20,6 +20,7 @@ export default function TaskListScreen() {
   const [sortBy, setSortBy] = useState<"none" | "priority" | "dueDate">("none");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [flashingTaskId, setFlashingTaskId] = useState<string | null>(null);
   const flashOpacity = useRef(new Animated.Value(0)).current;
 
@@ -38,10 +39,15 @@ export default function TaskListScreen() {
 
   const priorityOrder = { low: 1, medium: 2, high: 3 };
 
-  const filteredTasks =
-    selectedCategory === "All"
-      ? tasks
-      : tasks.filter((task) => task.category === selectedCategory);
+  const query = searchQuery.trim().toLowerCase();
+
+  const filteredTasks = tasks.filter((task) => {
+    const matchesCategory =
+      selectedCategory === "All" || task.category === selectedCategory;
+    const matchesSearch =
+      query === "" || task.title.toLowerCase().includes(query);
+    return matchesCategory && matchesSearch;
+  });
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     if (a.completed !== b.completed) {
@@ -84,6 +90,22 @@ export default function TaskListScreen() {
       >
         <Text style={{ color: "white", fontWeight: "bold" }}>Add Task</Text>
       </Pressable>
+
+      <TextInput
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search tasks..."
+        placeholderTextColor="#9ca3af"
+        style={{
+          backgroundColor: "white",
+          padding: 12,
+          borderRadius: 10,
+          marginBottom: 14,
+          fontSize: 16,
+          borderWidth: 1,
+          borderColor: "#e5e7eb",
+        }}
+      />
 
       <View
         style={{
@@ -191,6 +213,12 @@ export default function TaskListScreen() {
           </Pressable>
         </View>
       </View>
+
+      {sortedTasks.length === 0 && (
+        <Text style={{ textAlign: "center", color: "#9ca3af", marginTop: 24 }}>
+          No tasks match your search.
+        </Text>
+      )}
 
       {sortedTasks.map((task) => (
         <View
