@@ -1,9 +1,10 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
+import React, { useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTasks } from "../context/TaskContext";
 import { scheduleTaskNotification } from "../services/NotificationService";
-import { TaskPriority } from "../types/task";
+import { RecurrenceFrequency, Task, TaskPriority } from "../types/task";
+import { estimateTaskDuration, formatDuration } from "../utils/estimateDuration";
 
 export default function CreateTaskScreen() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function CreateTaskScreen() {
   const [category, setCategory] = useState(categories[0] || "Study");
   const [customCategory, setCustomCategory] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency>("none"); // New State
   const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
   const [reminderMode, setReminderMode] = useState<"time" | "offset">("time");
   const [reminderHour, setReminderHour] = useState(9);
@@ -21,6 +23,17 @@ export default function CreateTaskScreen() {
   const [offsetHours, setOffsetHours] = useState(1);
   const [offsetMinutes, setOffsetMinutes] = useState(0);
   const [error, setError] = useState("");
+
+  const estimate = useMemo(
+    () =>
+      estimateTaskDuration({
+        title,
+        description,
+        category: customCategory.trim() || category,
+        priority,
+      }),
+    [title, description, customCategory, category, priority]
+  );
 
   const saveTask = async () => {
     const cleanTitle = title.trim();
@@ -48,7 +61,7 @@ export default function CreateTaskScreen() {
         ? `offset:${offsetHours * 60 + offsetMinutes}`
         : `${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`;
 
-    const task = {
+    const task: Task = {
       id: Date.now().toString(),
       title: cleanTitle,
       description: cleanDescription,
@@ -58,7 +71,9 @@ export default function CreateTaskScreen() {
       dueDate: parsedDate.toISOString(),
       createdDate: new Date().toISOString(),
       reminderTime,
+      estimatedMinutes: estimate.minutes,
       notificationId: null,
+      recurrence: recurrence !== "none" ? recurrence : undefined, // Attach recurrence
     };
 
     const notificationId = await scheduleTaskNotification(task);
@@ -78,6 +93,7 @@ export default function CreateTaskScreen() {
         Add Task
       </Text>
 
+      {/* Task Name */}
       <View
         style={{
           backgroundColor: "white",
@@ -103,6 +119,7 @@ export default function CreateTaskScreen() {
         />
       </View>
 
+      {/* Description */}
       <View
         style={{
           backgroundColor: "white",
@@ -130,6 +147,7 @@ export default function CreateTaskScreen() {
         />
       </View>
 
+      {/* Category */}
       <View
         style={{
           backgroundColor: "white",
@@ -182,6 +200,7 @@ export default function CreateTaskScreen() {
         />
       </View>
 
+      {/* Priority */}
       <View
         style={{
           backgroundColor: "white",
@@ -212,6 +231,44 @@ export default function CreateTaskScreen() {
         </View>
       </View>
 
+      {/* Recurrence Selector Component (New Section) */}
+      <View
+        style={{
+          backgroundColor: "white",
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 16,
+        }}
+      >
+        <Text style={{ fontWeight: "bold", marginBottom: 8 }}>Repeat Task</Text>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {(["none", "daily", "weekly", "monthly"] as const).map((freq) => (
+            <Pressable
+              key={freq}
+              onPress={() => setRecurrence(freq)}
+              style={{
+                flex: 1,
+                backgroundColor: recurrence === freq ? "#8a008a" : "#e8e8ef",
+                padding: 10,
+                borderRadius: 8,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: recurrence === freq ? "white" : "black",
+                  fontSize: 12,
+                  fontWeight: "500",
+                }}
+              >
+                {freq.charAt(0).toUpperCase() + freq.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* Reminder Layout */}
       <View
         style={{
           backgroundColor: "white",
@@ -301,6 +358,7 @@ export default function CreateTaskScreen() {
         )}
       </View>
 
+      {/* Due Date */}
       <View
         style={{
           backgroundColor: "white",
@@ -326,12 +384,37 @@ export default function CreateTaskScreen() {
         />
       </View>
 
+      {/* Estimated Time */}
+      <View
+        style={{
+          backgroundColor: "#f3e8ff",
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: "#e0c3fc",
+        }}
+      >
+        <Text style={{ fontWeight: "bold", marginBottom: 4, color: "#5b005b" }}>
+          Estimated time to complete
+        </Text>
+        <Text style={{ fontSize: 24, fontWeight: "bold", color: "#8a008a" }}>
+          {formatDuration(estimate.minutes)}
+        </Text>
+        <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 12 }}>
+          {estimate.matchedKeywords.length > 0
+            ? `Based on: ${estimate.matchedKeywords.slice(0, 4).join(", ")}`
+            : "Default estimate — add details for a sharper guess"}
+        </Text>
+      </View>
+
       {error ? (
         <Text style={{ color: "#eb5757", fontWeight: "bold", marginBottom: 12 }}>
           {error}
         </Text>
       ) : null}
 
+      {/* Save Button */}
       <Pressable
         onPress={saveTask}
         style={{

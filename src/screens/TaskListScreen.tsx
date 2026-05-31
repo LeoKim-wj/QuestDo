@@ -3,6 +3,7 @@ import { View, Text, Pressable, ScrollView, Animated } from "react-native";
 import { useRouter } from "expo-router";
 import { useTasks } from "../context/TaskContext";
 import { cancelTaskNotification } from "../services/NotificationService";
+import { formatDuration } from "../utils/estimateDuration";
 
 export default function TaskListScreen() {
   const router = useRouter();
@@ -240,6 +241,12 @@ export default function TaskListScreen() {
               ? new Date(task.dueDate).toLocaleDateString("en-NZ")
               : "Not set"}
           </Text>
+
+          {task.estimatedMinutes ? (
+            <Text style={{ color: task.completed ? "#6b7280" : "#8a008a", fontWeight: "600" }}>
+              Estimated time: {formatDuration(task.estimatedMinutes)}
+            </Text>
+          ) : null}
 
           <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
             <Pressable

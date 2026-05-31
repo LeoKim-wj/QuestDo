@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable, ScrollView } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTasks } from "../context/TaskContext";
 import { cancelTaskNotification, scheduleTaskNotification } from "../services/NotificationService";
 import { TaskPriority } from "../types/task";
+import { estimateTaskDuration, formatDuration } from "../utils/estimateDuration";
 
 export default function EditTaskScreen() {
   const router = useRouter();
@@ -31,6 +32,17 @@ export default function EditTaskScreen() {
   const [offsetHours, setOffsetHours] = useState(Math.floor(existingOffsetMins / 60));
   const [offsetMinutes, setOffsetMinutes] = useState(existingOffsetMins % 60);
   const [error, setError] = useState("");
+
+  const estimate = useMemo(
+    () =>
+      estimateTaskDuration({
+        title,
+        description,
+        category: customCategory.trim() || category,
+        priority,
+      }),
+    [title, description, customCategory, category, priority]
+  );
 
   if (!task || !id) {
     return (
@@ -76,6 +88,7 @@ export default function EditTaskScreen() {
       priority,
       dueDate: parsedDate.toISOString(),
       reminderTime,
+      estimatedMinutes: estimate.minutes,
       notificationId: null,
     };
     const notificationId = await scheduleTaskNotification(updatedTask);
@@ -88,6 +101,7 @@ export default function EditTaskScreen() {
       priority,
       dueDate: parsedDate.toISOString(),
       reminderTime,
+      estimatedMinutes: estimate.minutes,
       notificationId,
     });
 
@@ -349,6 +363,29 @@ export default function EditTaskScreen() {
             },
           }}
         />
+      </View>
+
+      <View
+        style={{
+          backgroundColor: "#f3e8ff",
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: "#e0c3fc",
+        }}
+      >
+        <Text style={{ fontWeight: "bold", marginBottom: 4, color: "#5b005b" }}>
+          Estimated time to complete
+        </Text>
+        <Text style={{ fontSize: 24, fontWeight: "bold", color: "#8a008a" }}>
+          {formatDuration(estimate.minutes)}
+        </Text>
+        <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 12 }}>
+          {estimate.matchedKeywords.length > 0
+            ? `Based on: ${estimate.matchedKeywords.slice(0, 4).join(", ")}`
+            : "Default estimate — add details for a sharper guess"}
+        </Text>
       </View>
 
       {error ? (
