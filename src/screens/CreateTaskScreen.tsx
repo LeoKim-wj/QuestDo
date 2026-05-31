@@ -24,16 +24,18 @@ export default function CreateTaskScreen() {
   const [offsetMinutes, setOffsetMinutes] = useState(0);
   const [error, setError] = useState("");
 
-  const estimate = useMemo(
-    () =>
-      estimateTaskDuration({
-        title,
-        description,
-        category: customCategory.trim() || category,
-        priority,
-      }),
-    [title, description, customCategory, category, priority]
-  );
+  const estimate = useMemo(() => {
+    if (!title.trim()) {
+      return { minutes: 0, matchedKeywords: [] };
+    }
+
+    return estimateTaskDuration({
+      title,
+      description,
+      category: customCategory.trim() || category,
+      priority,
+    });
+  }, [title, description, customCategory, category, priority]);
 
   const saveTask = async () => {
     const cleanTitle = title.trim();
