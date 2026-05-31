@@ -398,14 +398,22 @@ export default function CreateTaskScreen() {
         <Text style={{ fontWeight: "bold", marginBottom: 4, color: "#5b005b" }}>
           Estimated time to complete
         </Text>
-        <Text style={{ fontSize: 24, fontWeight: "bold", color: "#8a008a" }}>
-          {formatDuration(estimate.minutes)}
-        </Text>
-        <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 12 }}>
-          {estimate.matchedKeywords.length > 0
-            ? `Based on: ${estimate.matchedKeywords.slice(0, 4).join(", ")}`
-            : "Default estimate — add details for a sharper guess"}
-        </Text>
+        {title.trim() ? (
+          <>
+            <Text style={{ fontSize: 24, fontWeight: "bold", color: "#8a008a" }}>
+              {formatDuration(estimate.minutes)}
+            </Text>
+            <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 12 }}>
+              {estimate.matchedKeywords.length > 0
+                ? `Based on: ${estimate.matchedKeywords.slice(0, 4).join(", ")}`
+                : "General estimate — add details for a sharper guess"}
+            </Text>
+          </>
+        ) : (
+          <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 13 }}>
+            Enter a task name to see an estimate
+          </Text>
+        )}
       </View>
 
       {error ? (
