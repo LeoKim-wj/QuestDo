@@ -220,6 +220,14 @@ export default function HomeScreen() {
         >
           <Text style={styles.linkText}>Calendar</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity
+    style={styles.linkButton}
+    onPress={() => router.push("/summary")}
+  >
+    <Text style={styles.linkText}>Summary</Text>
+  </TouchableOpacity>
+  
       </View>
     </ScrollView>
   );
