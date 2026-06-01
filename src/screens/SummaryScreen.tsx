@@ -6,6 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
 } from "react-native";
+import { useRouter } from "expo-router";
+
 import { useTasks } from "../context/TaskContext";
 import {
   getWeeklySummary,
@@ -15,6 +17,7 @@ import {
 
 // Function: SummaryScreen
 export default function SummaryScreen() {
+  const router = useRouter();
   const { tasks } = useTasks();
 
   const [selectedSummary, setSelectedSummary] =
@@ -29,6 +32,15 @@ export default function SummaryScreen() {
 
   return (
     <ScrollView style={styles.container}>
+         <TouchableOpacity
+      onPress={() => router.back()}
+      style={styles.backButton}
+    >
+      <Text style={styles.backButtonText}>
+        ← Back
+      </Text>
+    </TouchableOpacity>
+
       <Text style={styles.title}>Task Summary</Text>
 
       <View style={styles.buttonRow}>
@@ -75,10 +87,23 @@ export default function SummaryScreen() {
 }
 
 const styles = StyleSheet.create({
+
   container: {
     flex: 1,
     padding: 20,
     backgroundColor: "#ffffff",
+  },
+  backButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#e8e8ef",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+
+  backButtonText: {
+    fontWeight: "bold",
   },
 
   title: {

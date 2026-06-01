@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
 import { Calendar } from "react-native-calendars";
 import { useTasks } from "../context/TaskContext";
 import { Task } from "../types/task";
@@ -12,6 +13,7 @@ const formatDateNZ = (dateString: string) => {
 };
 
 export default function CalendarScreen() {
+  const router = useRouter();
   const { tasks } = useTasks();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [viewMode, setViewMode] = useState<"month" | "week" | "day">("month");
@@ -77,6 +79,15 @@ export default function CalendarScreen() {
 
   return (
     <View style={styles.container}>
+      <TouchableOpacity
+      onPress={() => router.back()}
+      style={styles.backButton}
+    >
+      <Text style={styles.backButtonText}>
+        ← Back
+      </Text>
+    </TouchableOpacity>
+
       <Text style={styles.title}>QuestDo Calendar</Text>
 
       <View style={styles.buttonRow}>
@@ -119,6 +130,19 @@ const styles = StyleSheet.create({
     paddingTop: 60,
     backgroundColor: "#fff",
   },
+   backButton: {
+    alignSelf: "flex-start",
+    backgroundColor: "#e8e8ef",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+
+  backButtonText: {
+    fontWeight: "bold",
+  },
+  
   title: {
     fontSize: 28,
     fontWeight: "bold",
