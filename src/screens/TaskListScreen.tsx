@@ -73,7 +73,22 @@ export default function TaskListScreen() {
   });
 
   return (
+   
+
     <ScrollView style={{ flex: 1, padding: 20, backgroundColor: "#f8f8fb" }}>
+      <Pressable
+  onPress={() => router.back()}
+  style={{
+    alignSelf: "flex-start",
+    backgroundColor: "#e8e8ef",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginBottom: 12,
+  }}
+>
+  <Text style={{ fontWeight: "bold" }}>← Back</Text>
+</Pressable>
       <Text style={{ fontSize: 28, fontWeight: "bold", marginBottom: 16 }}>
         Manage Tasks
       </Text>
