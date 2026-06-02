@@ -33,6 +33,7 @@ type TaskDocument = {
   dueDate?: string;
   createdDate?: string;
   reminderTime?: string;
+  estimatedMinutes?: number;
   notificationId?: string | null;
   recurrence?: string | null;
   generatedFromTaskId?: string | null;
@@ -46,7 +47,11 @@ type RewardStateDocument = {
 
 type CosmeticStateDocument = {
   unlockedCosmeticIds?: string[];
-  equippedCosmetics?: { accessory?: string | null; furColor?: string | null };
+  equippedCosmetics?: {
+    accessory?: string | null;
+    furColor?: string | null;
+    background?: string | null;
+  };
   // Legacy field — migrated to equippedCosmetics.accessory on read
   equippedCosmeticId?: string | null;
 };
@@ -149,6 +154,8 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     dueDate: data.dueDate ?? new Date().toISOString(),
     createdDate: data.createdDate ?? new Date().toISOString(),
     reminderTime: data.reminderTime ?? "",
+    estimatedMinutes:
+      typeof data.estimatedMinutes === "number" ? data.estimatedMinutes : 0,
     notificationId: data.notificationId ?? null,
     recurrence: normalizeRecurrence(data.recurrence),
     generatedFromTaskId: data.generatedFromTaskId ?? null,
@@ -171,6 +178,8 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     dueDate: task.dueDate,
     createdDate,
     reminderTime: task.reminderTime ?? "",
+    estimatedMinutes:
+      typeof task.estimatedMinutes === "number" ? task.estimatedMinutes : 0,
     notificationId: task.notificationId ?? null,
     recurrence: task.recurrence ?? null,
     generatedFromTaskId: task.generatedFromTaskId ?? null,

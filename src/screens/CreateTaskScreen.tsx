@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
+import React, { useMemo, useState } from "react";
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTasks } from "../context/TaskContext";
 import { scheduleTaskNotification } from "../services/NotificationService";
 import { breakdownGoal, DetailLevel } from "../services/geminiService";
-import { Subtask, TaskPriority } from "../types/task";
+import { RecurrenceFrequency, Subtask, Task, TaskPriority } from "../types/task";
+import { estimateTaskDuration, formatDuration } from "../utils/estimateDuration";
 
 export default function CreateTaskScreen() {
   const router = useRouter();
@@ -15,42 +16,59 @@ export default function CreateTaskScreen() {
   const [category, setCategory] = useState(categories[0] || "Study");
   const [customCategory, setCustomCategory] = useState("");
   const [priority, setPriority] = useState<TaskPriority>("medium");
+  const [recurrence, setRecurrence] = useState<RecurrenceFrequency>("none");
   const [dueDate, setDueDate] = useState(new Date().toISOString().slice(0, 10));
   const [reminderMode, setReminderMode] = useState<"time" | "offset">("time");
   const [reminderHour, setReminderHour] = useState(9);
   const [reminderMinute, setReminderMinute] = useState(0);
   const [offsetHours, setOffsetHours] = useState(1);
   const [offsetMinutes, setOffsetMinutes] = useState(0);
-  const [error, setError] = useState("");
-
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [detailLevel, setDetailLevel] = useState<DetailLevel>("detailed");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+  const [error, setError] = useState("");
+
+  const estimate = useMemo(() => {
+    if (!title.trim()) {
+      return { minutes: 0, matchedKeywords: [] };
+    }
+
+    return estimateTaskDuration({
+      title,
+      description,
+      category: customCategory.trim() || category,
+      priority,
+    });
+  }, [title, description, customCategory, category, priority]);
 
   const handleBreakdown = async () => {
     if (!title.trim()) {
       setAiError("Enter a goal title first.");
       return;
     }
+
     setAiLoading(true);
     setAiError("");
+
     try {
       const suggestions = await breakdownGoal(title.trim(), description.trim(), detailLevel);
-      setSubtasks(suggestions.map((s, i) => ({
-        id: `${Date.now()}-${i}`,
-        title: s,
-        completed: false,
-      })));
-    } catch (e: any) {
-      setAiError(e?.message ?? "Failed to get suggestions. Please try again.");
+      setSubtasks(
+        suggestions.map((suggestion, index) => ({
+          id: `${Date.now()}-${index}`,
+          title: suggestion,
+          completed: false,
+        }))
+      );
+    } catch (err: any) {
+      setAiError(err?.message ?? "Failed to get suggestions. Please try again.");
     } finally {
       setAiLoading(false);
     }
   };
 
-  const removeSubtask = (id: string) => {
-    setSubtasks((prev) => prev.filter((s) => s.id !== id));
+  const removeSubtask = (subtaskId: string) => {
+    setSubtasks((current) => current.filter((subtask) => subtask.id !== subtaskId));
   };
 
   const saveTask = async () => {
@@ -63,10 +81,12 @@ export default function CreateTaskScreen() {
       setError("Task title is required.");
       return;
     }
+
     if (!cleanCategory) {
       setError("Category is required.");
       return;
     }
+
     if (Number.isNaN(parsedDate.getTime())) {
       setError("Due date must be a valid date.");
       return;
@@ -77,7 +97,7 @@ export default function CreateTaskScreen() {
         ? `offset:${offsetHours * 60 + offsetMinutes}`
         : `${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`;
 
-    const task = {
+    const task: Task = {
       id: Date.now().toString(),
       title: cleanTitle,
       description: cleanDescription,
@@ -87,7 +107,9 @@ export default function CreateTaskScreen() {
       dueDate: parsedDate.toISOString(),
       createdDate: new Date().toISOString(),
       reminderTime,
+      estimatedMinutes: estimate.minutes,
       notificationId: null,
+      recurrence: recurrence !== "none" ? recurrence : undefined,
       subtasks: subtasks.map((subtask) => ({
         id: subtask.id,
         title: subtask.title,
@@ -130,7 +152,6 @@ export default function CreateTaskScreen() {
         />
       </View>
 
-      {/* AI Breakdown Section */}
       <View style={[card, { borderWidth: 1.5, borderColor: "#8a008a" }]}>
         <Text style={label}>Break Down with AI</Text>
         <Text style={{ color: "#555", fontSize: 13, marginBottom: 12 }}>
@@ -154,7 +175,7 @@ export default function CreateTaskScreen() {
                 {level === "simple" ? "Simple" : level === "detailed" ? "Detailed" : "Step-by-Step"}
               </Text>
               <Text style={{ color: detailLevel === level ? "#eee" : "#888", fontSize: 11 }}>
-                {level === "simple" ? "3–4 steps" : level === "detailed" ? "5–6 steps" : "7–10 steps"}
+                {level === "simple" ? "3-4 steps" : level === "detailed" ? "5-6 steps" : "7-10 steps"}
               </Text>
             </Pressable>
           ))}
@@ -173,9 +194,7 @@ export default function CreateTaskScreen() {
             gap: 8,
           }}
         >
-          {aiLoading ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : null}
+          {aiLoading ? <ActivityIndicator color="white" size="small" /> : null}
           <Text style={{ color: "white", fontWeight: "bold" }}>
             {aiLoading ? "Breaking down..." : "Break Down with AI"}
           </Text>
@@ -185,7 +204,7 @@ export default function CreateTaskScreen() {
           <Text style={{ color: "#eb5757", marginTop: 8, fontSize: 13 }}>{aiError}</Text>
         ) : null}
 
-        {subtasks.length > 0 && (
+        {subtasks.length > 0 ? (
           <View style={{ marginTop: 14 }}>
             <Text style={{ fontWeight: "bold", marginBottom: 8 }}>
               Suggested Steps ({subtasks.length})
@@ -208,12 +227,12 @@ export default function CreateTaskScreen() {
                 </Text>
                 <Text style={{ flex: 1, color: "#333" }}>{subtask.title}</Text>
                 <Pressable onPress={() => removeSubtask(subtask.id)}>
-                  <Text style={{ color: "#eb5757", fontWeight: "bold", fontSize: 16 }}>✕</Text>
+                  <Text style={{ color: "#eb5757", fontWeight: "bold", fontSize: 13 }}>Remove</Text>
                 </Pressable>
               </View>
             ))}
           </View>
-        )}
+        ) : null}
       </View>
 
       <View style={card}>
@@ -222,7 +241,10 @@ export default function CreateTaskScreen() {
           {categories.map((item) => (
             <Pressable
               key={item}
-              onPress={() => { setCategory(item); setCustomCategory(""); }}
+              onPress={() => {
+                setCategory(item);
+                setCustomCategory("");
+              }}
               style={{
                 flex: 1,
                 backgroundColor: !customCategory && category === item ? "#8a008a" : "#e8e8ef",
@@ -270,6 +292,29 @@ export default function CreateTaskScreen() {
       </View>
 
       <View style={card}>
+        <Text style={label}>Repeat Task</Text>
+        <View style={{ flexDirection: "row", gap: 6 }}>
+          {(["none", "daily", "weekly", "monthly"] as const).map((freq) => (
+            <Pressable
+              key={freq}
+              onPress={() => setRecurrence(freq)}
+              style={{
+                flex: 1,
+                backgroundColor: recurrence === freq ? "#8a008a" : "#e8e8ef",
+                padding: 10,
+                borderRadius: 8,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ color: recurrence === freq ? "white" : "black", fontSize: 12, fontWeight: "500" }}>
+                {freq.charAt(0).toUpperCase() + freq.slice(1)}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      <View style={card}>
         <Text style={label}>Reminder</Text>
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 14 }}>
           {(["time", "offset"] as const).map((mode) => (
@@ -296,26 +341,26 @@ export default function CreateTaskScreen() {
             <Text style={{ color: "#555", marginBottom: 10 }}>Time on the day before the deadline</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setReminderHour((h) => (h + 1) % 24)} style={spinnerBtn}>
+                <Pressable onPress={() => setReminderHour((hour) => (hour + 1) % 24)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
                   {String(reminderHour).padStart(2, "0")}
                 </Text>
-                <Pressable onPress={() => setReminderHour((h) => (h - 1 + 24) % 24)} style={spinnerBtn}>
-                  <Text style={{ fontSize: 18 }}>−</Text>
+                <Pressable onPress={() => setReminderHour((hour) => (hour - 1 + 24) % 24)} style={spinnerBtn}>
+                  <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
               </View>
               <Text style={{ fontSize: 28, fontWeight: "bold" }}>:</Text>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setReminderMinute((m) => (m + 5) % 60)} style={spinnerBtn}>
+                <Pressable onPress={() => setReminderMinute((minute) => (minute + 5) % 60)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
                   {String(reminderMinute).padStart(2, "0")}
                 </Text>
-                <Pressable onPress={() => setReminderMinute((m) => (m - 5 + 60) % 60)} style={spinnerBtn}>
-                  <Text style={{ fontSize: 18 }}>−</Text>
+                <Pressable onPress={() => setReminderMinute((minute) => (minute - 5 + 60) % 60)} style={spinnerBtn}>
+                  <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
               </View>
             </View>
@@ -325,24 +370,24 @@ export default function CreateTaskScreen() {
             <Text style={{ color: "#555", marginBottom: 10 }}>How long before the deadline</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setOffsetHours((h) => Math.min(h + 1, 72))} style={spinnerBtn}>
+                <Pressable onPress={() => setOffsetHours((hours) => Math.min(hours + 1, 72))} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>{offsetHours}</Text>
-                <Pressable onPress={() => setOffsetHours((h) => Math.max(h - 1, 0))} style={spinnerBtn}>
-                  <Text style={{ fontSize: 18 }}>−</Text>
+                <Pressable onPress={() => setOffsetHours((hours) => Math.max(hours - 1, 0))} style={spinnerBtn}>
+                  <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
                 <Text style={{ color: "#555" }}>hrs</Text>
               </View>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setOffsetMinutes((m) => (m + 5) % 60)} style={spinnerBtn}>
+                <Pressable onPress={() => setOffsetMinutes((minutes) => (minutes + 5) % 60)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
                   {String(offsetMinutes).padStart(2, "0")}
                 </Text>
-                <Pressable onPress={() => setOffsetMinutes((m) => (m - 5 + 60) % 60)} style={spinnerBtn}>
-                  <Text style={{ fontSize: 18 }}>−</Text>
+                <Pressable onPress={() => setOffsetMinutes((minutes) => (minutes - 5 + 60) % 60)} style={spinnerBtn}>
+                  <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
                 <Text style={{ color: "#555" }}>min</Text>
               </View>
@@ -360,6 +405,37 @@ export default function CreateTaskScreen() {
           placeholderTextColor="gray"
           style={input}
         />
+      </View>
+
+      <View
+        style={{
+          backgroundColor: "#f3e8ff",
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: "#e0c3fc",
+        }}
+      >
+        <Text style={{ fontWeight: "bold", marginBottom: 4, color: "#5b005b" }}>
+          Estimated time to complete
+        </Text>
+        {title.trim() ? (
+          <>
+            <Text style={{ fontSize: 24, fontWeight: "bold", color: "#8a008a" }}>
+              {formatDuration(estimate.minutes)}
+            </Text>
+            <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 12 }}>
+              {estimate.matchedKeywords.length > 0
+                ? `Based on: ${estimate.matchedKeywords.slice(0, 4).join(", ")}`
+                : "General estimate - add details for a sharper guess"}
+            </Text>
+          </>
+        ) : (
+          <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 13 }}>
+            Enter a task name to see an estimate
+          </Text>
+        )}
       </View>
 
       {error ? (

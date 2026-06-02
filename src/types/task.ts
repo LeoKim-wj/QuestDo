@@ -17,7 +17,9 @@ export type Task = {
   dueDate: string;
   createdDate: string;
   reminderTime: string;
+  estimatedMinutes: number;
   notificationId?: string | null;
+
   recurrence?: Exclude<RecurrenceFrequency, "none">;
   generatedFromTaskId?: string | null;
   generatedNextTaskId?: string | null;
