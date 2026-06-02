@@ -67,7 +67,8 @@ type TaskContextType = {
   unlockedCosmeticIds: string[];
   equippedCosmetics: EquippedCosmetics;
   newlyUnlockedCosmeticId: string | null;
-  addTask: (task: Task) => Promise<void>;
+  addTask: (task: Task, force?: boolean) => Promise<TaskActionResult>;
+  isTasksLoaded: boolean;
   addCategory: (category: string) => void;
   deleteTask: (id: string) => Promise<TaskActionResult>;
   redeemBonusReward: (rewardId: string) => Promise<void>;
@@ -83,11 +84,14 @@ const defaultEquipped: EquippedCosmetics = { accessory: null, furColor: null, ba
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const tasksRef = useRef<Task[]>([]);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
+  tasksRef.current = tasks;
   const [redeemedRewardIds, setRedeemedRewardIds] = useState<string[]>([]);
   const [unlockedCosmeticIds, setUnlockedCosmeticIds] = useState<string[]>([]);
   const [equippedCosmetics, setEquippedCosmetics] = useState<EquippedCosmetics>(defaultEquipped);
   const [newlyUnlockedCosmeticId, setNewlyUnlockedCosmeticId] = useState<string | null>(null);
+  const [isTasksLoaded, setIsTasksLoaded] = useState(false);
   const generatedRecurringSourceIds = useRef(new Set<string>());
   const completionInProgressIds = useRef(new Set<string>());
   const initialCosmeticsLoaded = useRef(false);
@@ -118,6 +122,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         }
 
         setTasks(storedTasks);
+        setIsTasksLoaded(true);
         setRedeemedRewardIds(storedRedeemedRewardIds);
         setUnlockedCosmeticIds(cosmeticState.unlockedCosmeticIds);
         setEquippedCosmetics(cosmeticState.equippedCosmetics);
@@ -159,7 +164,30 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
   }, [totalPoints, unlockedCosmeticIds]);
 
-  const addTask = async (task: Task) => {
+  const addTask = async (task: Task, force = false): Promise<TaskActionResult> => {
+    console.log("=== addTask called ===");
+    console.log("force:", force);
+    console.log("tasksRef.current count:", tasksRef.current.length);
+    console.log("tasksRef titles:", tasksRef.current.map(t => t.title));
+    console.log("new task title:", task.title);
+
+    if (!force) {
+      const isDuplicate = tasksRef.current.some(
+        (existing) =>
+          existing.title.trim().toLowerCase() === task.title.trim().toLowerCase()
+      );
+
+      console.log("isDuplicate:", isDuplicate);
+
+      if (isDuplicate) {
+        console.log("Returning duplicate result");
+        return {
+          success: false,
+          reason: "duplicate",
+        };
+      }
+    }
+
     const taskWithCreatedDate = {
       ...task,
       createdDate: task.createdDate ?? new Date().toISOString(),
@@ -174,6 +202,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to save task to Firebase", error);
     }
+
+    return { success: true };
   };
 
   const addCategory = (category: string) => {
@@ -355,6 +385,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         unlockedCosmeticIds,
         equippedCosmetics,
         newlyUnlockedCosmeticId,
+        isTasksLoaded,
         addTask,
         addCategory,
         deleteTask,
