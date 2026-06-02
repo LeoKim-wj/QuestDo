@@ -1,8 +1,10 @@
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
 import { useTasks } from "../context/TaskContext";
 
 export default function ProgressScreen() {
+  const router = useRouter();
   const { tasks } = useTasks();
 
   const totalTasks = tasks.length;
@@ -13,6 +15,12 @@ export default function ProgressScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <TouchableOpacity
+  onPress={() => router.back()}
+  style={styles.backButton}
+>
+  <Text style={styles.backButtonText}>← Back</Text>
+</TouchableOpacity>
       <Text style={styles.projectTitle}>QuestDo</Text>
       <Text style={styles.title}>My Progress</Text>
       <Text style={styles.subtitle}>
@@ -78,6 +86,18 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "bold",
   },
+  backButton: {
+  alignSelf: "flex-start",
+  backgroundColor: "#e8e8ef",
+  paddingHorizontal: 12,
+  paddingVertical: 8,
+  borderRadius: 8,
+  marginBottom: 12,
+},
+
+backButtonText: {
+  fontWeight: "bold",
+},
   title: {
     color: "#11181C",
     fontSize: 24,

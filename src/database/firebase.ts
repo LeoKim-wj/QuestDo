@@ -11,8 +11,16 @@ import {
   query,
   setDoc,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
-import { Task, TaskPriority } from "../types/task";
+import { EquippedCosmetics } from "../types/cosmetics";
+import { RecurrenceFrequency, Subtask, Task, TaskPriority } from "../types/task";
+
+type SubtaskDocument = {
+  id: string;
+  title: string;
+  completed: boolean;
+};
 
 type TaskDocument = {
   id?: string;
@@ -27,10 +35,25 @@ type TaskDocument = {
   reminderTime?: string;
   estimatedMinutes?: number;
   notificationId?: string | null;
+  recurrence?: string | null;
+  generatedFromTaskId?: string | null;
+  generatedNextTaskId?: string | null;
+  subtasks?: SubtaskDocument[];
 };
 
 type RewardStateDocument = {
   redeemedRewardIds?: string[];
+};
+
+type CosmeticStateDocument = {
+  unlockedCosmeticIds?: string[];
+  equippedCosmetics?: {
+    accessory?: string | null;
+    furColor?: string | null;
+    background?: string | null;
+  };
+  // Legacy field — migrated to equippedCosmetics.accessory on read
+  equippedCosmeticId?: string | null;
 };
 
 const firebaseConfig = {
@@ -86,12 +109,38 @@ function getRewardStateDocument(firestore: Firestore) {
   return doc(firestore, "rewardState", "currentUser");
 }
 
+function getCosmeticStateDocument(firestore: Firestore) {
+  return doc(firestore, "cosmeticState", "currentUser");
+}
+
 function normalizePriority(priority?: string): TaskPriority {
   if (priority === "high" || priority === "low" || priority === "medium") {
     return priority;
   }
 
   return "medium";
+}
+
+function normalizeRecurrence(recurrence?: string | null): Exclude<RecurrenceFrequency, "none"> | undefined {
+  if (recurrence === "daily" || recurrence === "weekly" || recurrence === "monthly") {
+    return recurrence;
+  }
+
+  return undefined;
+}
+
+function normalizeSubtasks(subtasks?: SubtaskDocument[]): Subtask[] {
+  if (!Array.isArray(subtasks)) {
+    return [];
+  }
+
+  return subtasks
+    .filter((subtask) => subtask && typeof subtask.title === "string")
+    .map((subtask, index) => ({
+      id: subtask.id || `subtask-${index}`,
+      title: subtask.title,
+      completed: Boolean(subtask.completed),
+    }));
 }
 
 function mapDocumentToTask(id: string, data: TaskDocument): Task {
@@ -108,6 +157,10 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     estimatedMinutes:
       typeof data.estimatedMinutes === "number" ? data.estimatedMinutes : 0,
     notificationId: data.notificationId ?? null,
+    recurrence: normalizeRecurrence(data.recurrence),
+    generatedFromTaskId: data.generatedFromTaskId ?? null,
+    generatedNextTaskId: data.generatedNextTaskId ?? null,
+    subtasks: normalizeSubtasks(data.subtasks),
   };
 }
 
@@ -128,7 +181,21 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     estimatedMinutes:
       typeof task.estimatedMinutes === "number" ? task.estimatedMinutes : 0,
     notificationId: task.notificationId ?? null,
+    recurrence: task.recurrence ?? null,
+    generatedFromTaskId: task.generatedFromTaskId ?? null,
+    generatedNextTaskId: task.generatedNextTaskId ?? null,
+    subtasks: normalizeSubtasks(task.subtasks),
   };
+}
+
+export function getFirebaseApp(): FirebaseApp {
+  if (!hasFirebaseConfig()) {
+    throw new Error('Firebase is not configured. Check your .env file.');
+  }
+  if (!app) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  }
+  return app;
 }
 
 export async function initializeFirebase() {
@@ -160,6 +227,25 @@ export async function insertTask(task: Task) {
   await setDoc(doc(firestore, "tasks", task.id), taskToDocument(task));
 }
 
+export async function completeTaskAndCreateNextTask(id: string, nextTask: Task) {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return;
+  }
+
+  const batch = writeBatch(firestore);
+
+  batch.update(doc(firestore, "tasks", id), {
+    completed: true,
+    status: "completed",
+    generatedNextTaskId: nextTask.id,
+  });
+  batch.set(doc(firestore, "tasks", nextTask.id), taskToDocument(nextTask));
+
+  await batch.commit();
+}
+
 export async function updateTaskRecord(id: string, updatedFields: Partial<Task>) {
   const firestore = getTaskDatabase();
 
@@ -169,6 +255,9 @@ export async function updateTaskRecord(id: string, updatedFields: Partial<Task>)
 
   const updatePayload = {
     ...updatedFields,
+    ...("recurrence" in updatedFields
+      ? { recurrence: updatedFields.recurrence ?? null }
+      : {}),
     ...(typeof updatedFields.completed === "boolean"
       ? { status: updatedFields.completed ? "completed" : "incomplete" }
       : {}),
@@ -228,6 +317,50 @@ export async function saveRedeemedRewardIds(redeemedRewardIds: string[]) {
   await setDoc(
     getRewardStateDocument(firestore),
     { redeemedRewardIds },
+    { merge: true }
+  );
+}
+
+export async function getCosmeticState(): Promise<{ unlockedCosmeticIds: string[]; equippedCosmetics: EquippedCosmetics }> {
+  const firestore = getTaskDatabase();
+
+  const defaultState = { unlockedCosmeticIds: [], equippedCosmetics: { accessory: null, furColor: null, background: null } };
+
+  if (!firestore) {
+    return defaultState;
+  }
+
+  const snapshot = await getDoc(getCosmeticStateDocument(firestore));
+
+  if (!snapshot.exists()) {
+    return defaultState;
+  }
+
+  const data = snapshot.data() as CosmeticStateDocument;
+  const legacyAccessory = data.equippedCosmeticId ?? null;
+
+  const equippedCosmetics: EquippedCosmetics = {
+    accessory: data.equippedCosmetics?.accessory ?? legacyAccessory,
+    furColor: data.equippedCosmetics?.furColor ?? null,
+    background: data.equippedCosmetics?.background ?? null,
+  };
+
+  return {
+    unlockedCosmeticIds: Array.isArray(data.unlockedCosmeticIds) ? data.unlockedCosmeticIds : [],
+    equippedCosmetics,
+  };
+}
+
+export async function saveCosmeticState(unlockedCosmeticIds: string[], equippedCosmetics: EquippedCosmetics) {
+  const firestore = getTaskDatabase();
+
+  if (!firestore) {
+    return;
+  }
+
+  await setDoc(
+    getCosmeticStateDocument(firestore),
+    { unlockedCosmeticIds, equippedCosmetics },
     { merge: true }
   );
 }

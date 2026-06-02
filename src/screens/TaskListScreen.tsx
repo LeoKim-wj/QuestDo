@@ -1,17 +1,27 @@
-import React, { useState, useRef } from "react";
-import { View, Text, Pressable, ScrollView, Animated } from "react-native";
+import React, { useRef, useState } from "react";
+import { Animated, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useTasks } from "../context/TaskContext";
 import { cancelTaskNotification } from "../services/NotificationService";
+import { Task } from "../types/task";
 import { formatDuration } from "../utils/estimateDuration";
+
+function formatRecurrence(recurrence: Task["recurrence"]) {
+  if (!recurrence) {
+    return "None";
+  }
+
+  return recurrence.charAt(0).toUpperCase() + recurrence.slice(1);
+}
 
 export default function TaskListScreen() {
   const router = useRouter();
-  const { categories, tasks, deleteTask, toggleTaskCompleted } = useTasks();
+  const { categories, tasks, deleteTask, toggleTaskCompleted, updateTask } = useTasks();
 
   const [sortBy, setSortBy] = useState<"none" | "priority" | "dueDate">("none");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [flashingTaskId, setFlashingTaskId] = useState<string | null>(null);
   const flashOpacity = useRef(new Animated.Value(0)).current;
 
@@ -29,13 +39,22 @@ export default function TaskListScreen() {
   };
 
   const priorityOrder = { low: 1, medium: 2, high: 3 };
+  const query = searchQuery.trim().toLowerCase();
 
-  const filteredTasks =
-    selectedCategory === "All"
-      ? tasks
-      : tasks.filter((task) => task.category === selectedCategory);
+  const filteredTasks = tasks.filter((task) => {
+    const matchesCategory =
+      selectedCategory === "All" || task.category === selectedCategory;
+    const matchesSearch =
+      query === "" || task.title.toLowerCase().includes(query);
+
+    return matchesCategory && matchesSearch;
+  });
 
   const sortedTasks = [...filteredTasks].sort((a, b) => {
+    if (a.completed !== b.completed) {
+      return a.completed ? 1 : -1;
+    }
+
     if (sortBy === "priority") {
       const result =
         priorityOrder[a.priority || "medium"] -
@@ -51,11 +70,25 @@ export default function TaskListScreen() {
       return sortDirection === "asc" ? result : -result;
     }
 
-    return 0;
+    return getDueDateTime(a.dueDate) - getDueDateTime(b.dueDate);
   });
 
   return (
     <ScrollView style={{ flex: 1, padding: 20, backgroundColor: "#f8f8fb" }}>
+      <Pressable
+        onPress={() => router.back()}
+        style={{
+          alignSelf: "flex-start",
+          backgroundColor: "#e8e8ef",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 8,
+          marginBottom: 12,
+        }}
+      >
+        <Text style={{ fontWeight: "bold" }}>Back</Text>
+      </Pressable>
+
       <Text style={{ fontSize: 28, fontWeight: "bold", marginBottom: 16 }}>
         Manage Tasks
       </Text>
@@ -72,6 +105,22 @@ export default function TaskListScreen() {
       >
         <Text style={{ color: "white", fontWeight: "bold" }}>Add Task</Text>
       </Pressable>
+
+      <TextInput
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholder="Search tasks..."
+        placeholderTextColor="#9ca3af"
+        style={{
+          backgroundColor: "white",
+          padding: 12,
+          borderRadius: 10,
+          marginBottom: 14,
+          fontSize: 16,
+          borderWidth: 1,
+          borderColor: "#e5e7eb",
+        }}
+      />
 
       <View
         style={{
@@ -95,11 +144,7 @@ export default function TaskListScreen() {
                 borderRadius: 8,
               }}
             >
-              <Text
-                style={{
-                  color: selectedCategory === category ? "white" : "black",
-                }}
-              >
+              <Text style={{ color: selectedCategory === category ? "white" : "black" }}>
                 {category}
               </Text>
             </Pressable>
@@ -180,6 +225,12 @@ export default function TaskListScreen() {
         </View>
       </View>
 
+      {sortedTasks.length === 0 ? (
+        <Text style={{ textAlign: "center", color: "#9ca3af", marginTop: 24 }}>
+          No tasks match your search.
+        </Text>
+      ) : null}
+
       {sortedTasks.map((task) => (
         <View
           key={task.id}
@@ -204,7 +255,7 @@ export default function TaskListScreen() {
             >
               {task.title}
             </Text>
-            {flashingTaskId === task.id && (
+            {flashingTaskId === task.id ? (
               <Animated.Text
                 style={{
                   opacity: flashOpacity,
@@ -216,20 +267,30 @@ export default function TaskListScreen() {
               >
                 +5 pts!
               </Animated.Text>
-            )}
-            {task.completed && flashingTaskId !== task.id && (
+            ) : null}
+            {task.completed && flashingTaskId !== task.id ? (
               <Text style={{ color: "#16a34a", fontWeight: "bold", fontSize: 13 }}>
                 +5 pts
               </Text>
-            )}
+            ) : null}
           </View>
 
           <Text style={{ marginTop: 4, color: task.completed ? "#6b7280" : "#000" }}>
             Status: {task.completed ? "Completed" : "Incomplete"}
           </Text>
+          {task.generatedFromTaskId ? (
+            <Text style={{ color: "#16a34a", fontWeight: "bold" }}>
+              Next repeat
+            </Text>
+          ) : null}
 
           <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>Priority: {task.priority || "medium"}</Text>
           <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>Category: {task.category || "Uncategorized"}</Text>
+          {task.recurrence ? (
+            <Text style={{ color: task.completed ? "#6b7280" : "#000" }}>
+              Repeat: {formatRecurrence(task.recurrence)}
+            </Text>
+          ) : null}
 
           {task.description ? (
             <Text style={{ marginTop: 4, color: task.completed ? "#6b7280" : "#000" }}>{task.description}</Text>
@@ -246,6 +307,52 @@ export default function TaskListScreen() {
             <Text style={{ color: task.completed ? "#6b7280" : "#8a008a", fontWeight: "600" }}>
               Estimated time: {formatDuration(task.estimatedMinutes)}
             </Text>
+          ) : null}
+
+          {task.subtasks && task.subtasks.length > 0 ? (
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontWeight: "bold", fontSize: 13, color: task.completed ? "#6b7280" : "#333", marginBottom: 6 }}>
+                Steps: {task.subtasks.filter((subtask) => subtask.completed).length}/{task.subtasks.length} done
+              </Text>
+              {task.subtasks.map((subtask) => (
+                <Pressable
+                  key={subtask.id}
+                  onPress={() => {
+                    const updatedSubtasks = task.subtasks!.map((item) =>
+                      item.id === subtask.id ? { ...item, completed: !item.completed } : item
+                    );
+                    updateTask(task.id, { subtasks: updatedSubtasks });
+                  }}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 8,
+                    paddingVertical: 4,
+                  }}
+                >
+                  <View
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 4,
+                      borderWidth: 2,
+                      borderColor: subtask.completed ? "#8a008a" : "#aaa",
+                      backgroundColor: subtask.completed ? "#8a008a" : "white",
+                    }}
+                  />
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: 13,
+                      color: subtask.completed ? "#6b7280" : "#333",
+                      textDecorationLine: subtask.completed ? "line-through" : "none",
+                    }}
+                  >
+                    {subtask.title}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
           ) : null}
 
           <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
@@ -302,4 +409,10 @@ export default function TaskListScreen() {
       ))}
     </ScrollView>
   );
+}
+
+function getDueDateTime(dueDate: string) {
+  const dateTime = new Date(dueDate).getTime();
+
+  return Number.isNaN(dateTime) ? Number.MAX_SAFE_INTEGER : dateTime;
 }
