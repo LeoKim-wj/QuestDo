@@ -24,9 +24,29 @@ export default function TaskListScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [flashingTaskId, setFlashingTaskId] = useState<string | null>(null);
   const flashOpacity = useRef(new Animated.Value(0)).current;
+  const [taskErrors, setTaskErrors] = useState<Record<string, string>>({});
+
+  const showTaskError = (taskId: string, message: string) => {
+    setTaskErrors((current) => ({ ...current, [taskId]: message }));
+    setTimeout(() => {
+      setTaskErrors((current) => {
+        const next = { ...current };
+        delete next[taskId];
+        return next;
+      });
+    }, 4000);
+  };
 
   const handleToggle = async (taskId: string, currentlyCompleted: boolean) => {
-    await toggleTaskCompleted(taskId);
+    const result = await toggleTaskCompleted(taskId);
+
+    if (!result.success) {
+      if (result.reason) {
+        showTaskError(taskId, result.reason);
+      }
+      return;
+    }
+
     if (!currentlyCompleted) {
       setFlashingTaskId(taskId);
       flashOpacity.setValue(1);
@@ -36,6 +56,19 @@ export default function TaskListScreen() {
         useNativeDriver: true,
       }).start(() => setFlashingTaskId(null));
     }
+  };
+
+  const handleDelete = async (taskId: string, notificationId?: string | null) => {
+    const result = await deleteTask(taskId);
+
+    if (!result.success) {
+      if (result.reason) {
+        showTaskError(taskId, result.reason);
+      }
+      return;
+    }
+
+    await cancelTaskNotification(notificationId);
   };
 
   const priorityOrder = { low: 1, medium: 2, high: 3 };
@@ -278,6 +311,22 @@ export default function TaskListScreen() {
           <Text style={{ marginTop: 4, color: task.completed ? "#6b7280" : "#000" }}>
             Status: {task.completed ? "Completed" : "Incomplete"}
           </Text>
+          {taskErrors[task.id] ? (
+            <View
+              style={{
+                backgroundColor: "#fef2f2",
+                borderRadius: 8,
+                padding: 10,
+                marginTop: 8,
+                borderWidth: 1,
+                borderColor: "#fca5a5",
+              }}
+            >
+              <Text style={{ color: "#dc2626", fontSize: 13, fontWeight: "600" }}>
+                {taskErrors[task.id]}
+              </Text>
+            </View>
+          ) : null}
           {task.generatedFromTaskId ? (
             <Text style={{ color: "#16a34a", fontWeight: "bold" }}>
               Next repeat
@@ -390,10 +439,7 @@ export default function TaskListScreen() {
             </Pressable>
 
             <Pressable
-              onPress={async () => {
-                await cancelTaskNotification(task.notificationId);
-                await deleteTask(task.id);
-              }}
+              onPress={() => handleDelete(task.id, task.notificationId)}
               style={{
                 flex: 1,
                 backgroundColor: "#eb5757",

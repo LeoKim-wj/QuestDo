@@ -17,6 +17,48 @@ import { cosmeticItems } from "../rewards/cosmeticItems";
 import { CosmeticType, EquippedCosmetics } from "../types/cosmetics";
 import { Task } from "../types/task";
 
+// --- Safeguard types ---
+
+export type TaskActionResult = {
+  success: boolean;
+  reason?: string;
+};
+
+type TaskAction = "complete" | "delete" | "edit";
+
+// --- Validation utility ---
+
+function validateTaskAction(task: Task | undefined, action: TaskAction): TaskActionResult {
+  if (!task) {
+    return { success: false, reason: "Task not found." };
+  }
+
+  if (!task.createdDate || isNaN(new Date(task.createdDate).getTime())) {
+    return { success: false, reason: "Task has an invalid creation date." };
+  }
+
+  if (action === "complete") {
+    if (task.completed) {
+      return { success: false, reason: "Task is already completed." };
+    }
+
+    const createdAt = new Date(task.createdDate).getTime();
+    const now = Date.now();
+    const elapsedSeconds = (now - createdAt) / 1000;
+
+    if (elapsedSeconds < 30) {
+      return {
+        success: false,
+        reason: "This task was just created. Try again in 30 seconds.",
+      };
+    }
+  }
+
+  return { success: true };
+}
+
+// --- Context type ---
+
 type TaskContextType = {
   tasks: Task[];
   categories: string[];
@@ -25,12 +67,13 @@ type TaskContextType = {
   unlockedCosmeticIds: string[];
   equippedCosmetics: EquippedCosmetics;
   newlyUnlockedCosmeticId: string | null;
-  addTask: (task: Task) => Promise<void>;
+  addTask: (task: Task, force?: boolean) => Promise<TaskActionResult>;
+  isTasksLoaded: boolean;
   addCategory: (category: string) => void;
-  deleteTask: (id: string) => Promise<void>;
+  deleteTask: (id: string) => Promise<TaskActionResult>;
   redeemBonusReward: (rewardId: string) => Promise<void>;
-  updateTask: (id: string, updatedFields: Partial<Task>) => Promise<void>;
-  toggleTaskCompleted: (id: string) => Promise<void>;
+  updateTask: (id: string, updatedFields: Partial<Task>) => Promise<TaskActionResult>;
+  toggleTaskCompleted: (id: string) => Promise<TaskActionResult>;
   equipCosmetic: (type: CosmeticType, id: string | null) => Promise<void>;
   clearNewlyUnlocked: () => void;
 };
@@ -41,11 +84,14 @@ const defaultEquipped: EquippedCosmetics = { accessory: null, furColor: null, ba
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const tasksRef = useRef<Task[]>([]);
   const [categories, setCategories] = useState<string[]>(defaultCategories);
+  tasksRef.current = tasks;
   const [redeemedRewardIds, setRedeemedRewardIds] = useState<string[]>([]);
   const [unlockedCosmeticIds, setUnlockedCosmeticIds] = useState<string[]>([]);
   const [equippedCosmetics, setEquippedCosmetics] = useState<EquippedCosmetics>(defaultEquipped);
   const [newlyUnlockedCosmeticId, setNewlyUnlockedCosmeticId] = useState<string | null>(null);
+  const [isTasksLoaded, setIsTasksLoaded] = useState(false);
   const generatedRecurringSourceIds = useRef(new Set<string>());
   const completionInProgressIds = useRef(new Set<string>());
   const initialCosmeticsLoaded = useRef(false);
@@ -76,6 +122,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         }
 
         setTasks(storedTasks);
+        setIsTasksLoaded(true);
         setRedeemedRewardIds(storedRedeemedRewardIds);
         setUnlockedCosmeticIds(cosmeticState.unlockedCosmeticIds);
         setEquippedCosmetics(cosmeticState.equippedCosmetics);
@@ -117,7 +164,21 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
   }, [totalPoints, unlockedCosmeticIds]);
 
-  const addTask = async (task: Task) => {
+  const addTask = async (task: Task, force = false): Promise<TaskActionResult> => {
+    if (!force) {
+      const isDuplicate = tasksRef.current.some(
+        (existing) =>
+          existing.title.trim().toLowerCase() === task.title.trim().toLowerCase()
+      );
+
+      if (isDuplicate) {
+        return {
+          success: false,
+          reason: "duplicate",
+        };
+      }
+    }
+
     const taskWithCreatedDate = {
       ...task,
       createdDate: task.createdDate ?? new Date().toISOString(),
@@ -132,6 +193,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to save task to Firebase", error);
     }
+
+    return { success: true };
   };
 
   const addCategory = (category: string) => {
@@ -148,7 +211,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const deleteTask = async (id: string) => {
+  const deleteTask = async (id: string): Promise<TaskActionResult> => {
+    const task = tasks.find((item) => item.id === id);
+    const validation = validateTaskAction(task, "delete");
+
+    if (!validation.success) {
+      return validation;
+    }
+
     setTasks((prev) => prev.filter((task) => task.id !== id));
 
     try {
@@ -156,6 +226,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to delete task from Firebase", error);
     }
+
+    return { success: true };
   };
 
   const redeemBonusReward = async (rewardId: string) => {
@@ -179,7 +251,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateTask = async (id: string, updatedFields: Partial<Task>) => {
+  const updateTask = async (id: string, updatedFields: Partial<Task>): Promise<TaskActionResult> => {
+    const task = tasks.find((item) => item.id === id);
+    const validation = validateTaskAction(task, "edit");
+
+    if (!validation.success) {
+      return validation;
+    }
+
     setTasks((prev) =>
       prev.map((task) =>
         task.id === id ? { ...task, ...updatedFields } : task
@@ -195,36 +274,49 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error("Failed to update task in Firebase", error);
     }
+
+    return { success: true };
   };
 
-  const toggleTaskCompleted = async (id: string) => {
+  const toggleTaskCompleted = async (id: string): Promise<TaskActionResult> => {
     if (completionInProgressIds.current.has(id)) {
-      return;
+      return { success: false, reason: "Completion already in progress." };
     }
 
     const task = tasks.find((item) => item.id === id);
-    if (!task) {
-      return;
+    const nextCompleted = !task?.completed;
+
+    // Only validate when marking as complete (not when undoing)
+    if (nextCompleted) {
+      const validation = validateTaskAction(task, "complete");
+      if (!validation.success) {
+        return validation;
+      }
+    } else {
+      // Still check task exists and has valid createdDate for undo
+      if (!task) {
+        return { success: false, reason: "Task not found." };
+      }
     }
 
     completionInProgressIds.current.add(id);
-    const nextCompleted = !task.completed;
+
     const shouldCreateRecurringTask =
       nextCompleted &&
-      !task.completed &&
-      task.recurrence &&
-      !task.generatedNextTaskId &&
+      !task!.completed &&
+      task!.recurrence &&
+      !task!.generatedNextTaskId &&
       !hasGeneratedRecurringTask(
         tasks,
-        task,
+        task!,
         generatedRecurringSourceIds.current
       );
     const recurringTask = shouldCreateRecurringTask
-      ? createNextRecurringTask(task)
+      ? createNextRecurringTask(task!)
       : null;
 
     if (recurringTask) {
-      generatedRecurringSourceIds.current.add(task.id);
+      generatedRecurringSourceIds.current.add(task!.id);
     }
 
     setTasks((prev) =>
@@ -257,6 +349,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     } finally {
       completionInProgressIds.current.delete(id);
     }
+
+    return { success: true };
   };
 
   const equipCosmetic = async (type: CosmeticType, id: string | null) => {
@@ -282,6 +376,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         unlockedCosmeticIds,
         equippedCosmetics,
         newlyUnlockedCosmeticId,
+        isTasksLoaded,
         addTask,
         addCategory,
         deleteTask,
@@ -314,6 +409,7 @@ function createNextRecurringTask(task: Task): Task {
     ...task,
     id: `recurring-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     completed: false,
+    completedDate: null,
     dueDate: getNextDueDate(task.dueDate, task.recurrence),
     createdDate,
     notificationId: null,

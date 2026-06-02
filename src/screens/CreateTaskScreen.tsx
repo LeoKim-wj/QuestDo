@@ -28,6 +28,7 @@ export default function CreateTaskScreen() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   const [error, setError] = useState("");
+  const [pendingTask, setPendingTask] = useState<Task | null>(null);
 
   const estimate = useMemo(() => {
     if (!title.trim()) {
@@ -77,6 +78,9 @@ export default function CreateTaskScreen() {
     const cleanCategory = (customCategory.trim() || category).trim();
     const parsedDate = new Date(dueDate);
 
+    setError("");
+    setPendingTask(null);
+
     if (!cleanTitle) {
       setError("Task title is required.");
       return;
@@ -118,8 +122,27 @@ export default function CreateTaskScreen() {
     };
 
     const notificationId = await scheduleTaskNotification(task);
+    const taskWithNotification = { ...task, notificationId };
+    const result = await addTask(taskWithNotification);
+
+    if (!result.success && result.reason === "duplicate") {
+      setPendingTask(taskWithNotification);
+      return;
+    }
+
     addCategory(cleanCategory);
-    await addTask({ ...task, notificationId });
+    router.back();
+  };
+
+  const handleCreateAnyway = async () => {
+    if (!pendingTask) {
+      return;
+    }
+
+    const taskToSave = pendingTask;
+    setPendingTask(null);
+    await addTask(taskToSave, true);
+    addCategory(taskToSave.category);
     router.back();
   };
 
@@ -440,6 +463,52 @@ export default function CreateTaskScreen() {
 
       {error ? (
         <Text style={{ color: "#eb5757", fontWeight: "bold", marginBottom: 12 }}>{error}</Text>
+      ) : null}
+
+      {pendingTask ? (
+        <View
+          style={{
+            backgroundColor: "#fef2f2",
+            borderColor: "#fca5a5",
+            borderWidth: 1,
+            borderRadius: 10,
+            padding: 12,
+            marginBottom: 12,
+          }}
+        >
+          <Text style={{ color: "#dc2626", fontWeight: "bold", fontSize: 14 }}>
+            Duplicate Task
+          </Text>
+          <Text style={{ color: "#555", marginTop: 6 }}>
+            A task named {pendingTask.title} already exists.
+          </Text>
+          <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+            <Pressable
+              onPress={() => setPendingTask(null)}
+              style={{
+                flex: 1,
+                backgroundColor: "#e8e8ef",
+                padding: 10,
+                borderRadius: 8,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontWeight: "bold", color: "#333" }}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              onPress={handleCreateAnyway}
+              style={{
+                flex: 1,
+                backgroundColor: "#8a008a",
+                padding: 10,
+                borderRadius: 8,
+                alignItems: "center",
+              }}
+            >
+              <Text style={{ fontWeight: "bold", color: "white" }}>Create Anyway</Text>
+            </Pressable>
+          </View>
+        </View>
       ) : null}
 
       <Pressable
