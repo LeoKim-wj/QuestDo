@@ -62,9 +62,13 @@ npx expo start
 
 ### Georgia Rouse
 
+*Product Owner responsibilities
 * Calendar implementation
 * Delete task functionality
 * UI / cosmetic improvements
+* User Authentication
+* Task Point System
+* Comsetic Unlock
 * Documentation support
 
 ### Ben Samountry
@@ -79,6 +83,8 @@ npx expo start
 * Notification and reminder features
 * Task duration estimation
 * Application integration support
+* Login Page
+* Search Function
 
 ### Tanvir Singh
 
@@ -86,6 +92,7 @@ npx expo start
 * Task sorting functionality
 * Progress tracking support
 * Testing contribution
+* App Navigation
 
 ## Project Overview
 
