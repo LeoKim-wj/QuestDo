@@ -161,7 +161,7 @@ export default function LoginScreen() {
           onPress={() => router.push('/signup')}
         >
           <Text style={[styles.signUpText, { fontFamily: activeFont }]}>
-            Don't have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
+            Don&apos;t have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
           </Text>
         </TouchableOpacity>
 

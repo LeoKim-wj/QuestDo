@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { Calendar } from "react-native-calendars";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -6,6 +6,7 @@ import { useTasks } from "../context/TaskContext";
 import { cancelTaskNotification, scheduleTaskNotification } from "../services/NotificationService";
 import { breakdownGoal, DetailLevel } from "../services/geminiService";
 import { RecurrenceFrequency, Subtask, TaskPriority } from "../types/task";
+import { estimateTaskDuration, formatDuration } from "../utils/estimateDuration";
 
 export default function EditTaskScreen() {
   const router = useRouter();
@@ -13,7 +14,7 @@ export default function EditTaskScreen() {
   const { addCategory, categories, tasks, updateTask } = useTasks();
 
   const id = Array.isArray(taskId) ? taskId[0] : taskId;
-  const task = tasks.find((t) => t.id === id);
+  const task = tasks.find((item) => item.id === id);
 
   const [title, setTitle] = useState(task?.title || "");
   const [description, setDescription] = useState(task?.description || "");
@@ -41,6 +42,17 @@ export default function EditTaskScreen() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
   const [error, setError] = useState("");
+
+  const estimate = useMemo(
+    () =>
+      estimateTaskDuration({
+        title,
+        description,
+        category: customCategory.trim() || category,
+        priority,
+      }),
+    [title, description, customCategory, category, priority]
+  );
 
   if (!task || !id) {
     return (
@@ -131,6 +143,7 @@ export default function EditTaskScreen() {
       recurrence: recurrence !== "none" ? recurrence : undefined,
       dueDate: parsedDate.toISOString(),
       reminderTime,
+      estimatedMinutes: estimate.minutes,
       notificationId: null,
       subtasks: cleanSubtasks,
     };
@@ -145,6 +158,7 @@ export default function EditTaskScreen() {
       recurrence: recurrence !== "none" ? recurrence : undefined,
       dueDate: parsedDate.toISOString(),
       reminderTime,
+      estimatedMinutes: estimate.minutes,
       notificationId,
       subtasks: cleanSubtasks,
     });
@@ -281,18 +295,13 @@ export default function EditTaskScreen() {
                 setCustomCategory("");
               }}
               style={{
-                backgroundColor:
-                  !customCategory && category === item ? "#8a008a" : "#e8e8ef",
+                backgroundColor: !customCategory && category === item ? "#8a008a" : "#e8e8ef",
                 padding: 10,
                 borderRadius: 8,
                 alignItems: "center",
               }}
             >
-              <Text
-                style={{
-                  color: !customCategory && category === item ? "white" : "black",
-                }}
-              >
+              <Text style={{ color: !customCategory && category === item ? "white" : "black" }}>
                 {item}
               </Text>
             </Pressable>
@@ -381,25 +390,25 @@ export default function EditTaskScreen() {
             <Text style={{ color: "#555", marginBottom: 10 }}>Time on the day before the deadline</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setReminderHour((h) => (h + 1) % 24)} style={spinnerBtn}>
+                <Pressable onPress={() => setReminderHour((hour) => (hour + 1) % 24)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
                   {String(reminderHour).padStart(2, "0")}
                 </Text>
-                <Pressable onPress={() => setReminderHour((h) => (h - 1 + 24) % 24)} style={spinnerBtn}>
+                <Pressable onPress={() => setReminderHour((hour) => (hour - 1 + 24) % 24)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
               </View>
               <Text style={{ fontSize: 28, fontWeight: "bold" }}>:</Text>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setReminderMinute((m) => (m + 5) % 60)} style={spinnerBtn}>
+                <Pressable onPress={() => setReminderMinute((minute) => (minute + 5) % 60)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
                   {String(reminderMinute).padStart(2, "0")}
                 </Text>
-                <Pressable onPress={() => setReminderMinute((m) => (m - 5 + 60) % 60)} style={spinnerBtn}>
+                <Pressable onPress={() => setReminderMinute((minute) => (minute - 5 + 60) % 60)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
               </View>
@@ -410,23 +419,23 @@ export default function EditTaskScreen() {
             <Text style={{ color: "#555", marginBottom: 10 }}>How long before the deadline</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setOffsetHours((h) => Math.min(h + 1, 72))} style={spinnerBtn}>
+                <Pressable onPress={() => setOffsetHours((hours) => Math.min(hours + 1, 72))} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>{offsetHours}</Text>
-                <Pressable onPress={() => setOffsetHours((h) => Math.max(h - 1, 0))} style={spinnerBtn}>
+                <Pressable onPress={() => setOffsetHours((hours) => Math.max(hours - 1, 0))} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
                 <Text style={{ color: "#555" }}>hrs</Text>
               </View>
               <View style={{ alignItems: "center", gap: 6 }}>
-                <Pressable onPress={() => setOffsetMinutes((m) => (m + 5) % 60)} style={spinnerBtn}>
+                <Pressable onPress={() => setOffsetMinutes((minutes) => (minutes + 5) % 60)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>+</Text>
                 </Pressable>
                 <Text style={{ fontSize: 28, fontWeight: "bold", minWidth: 44, textAlign: "center" }}>
                   {String(offsetMinutes).padStart(2, "0")}
                 </Text>
-                <Pressable onPress={() => setOffsetMinutes((m) => (m - 5 + 60) % 60)} style={spinnerBtn}>
+                <Pressable onPress={() => setOffsetMinutes((minutes) => (minutes - 5 + 60) % 60)} style={spinnerBtn}>
                   <Text style={{ fontSize: 18 }}>-</Text>
                 </Pressable>
                 <Text style={{ color: "#555" }}>min</Text>
@@ -451,6 +460,29 @@ export default function EditTaskScreen() {
             },
           }}
         />
+      </View>
+
+      <View
+        style={{
+          backgroundColor: "#f3e8ff",
+          padding: 14,
+          borderRadius: 12,
+          marginBottom: 16,
+          borderWidth: 1,
+          borderColor: "#e0c3fc",
+        }}
+      >
+        <Text style={{ fontWeight: "bold", marginBottom: 4, color: "#5b005b" }}>
+          Estimated time to complete
+        </Text>
+        <Text style={{ fontSize: 24, fontWeight: "bold", color: "#8a008a" }}>
+          {formatDuration(estimate.minutes)}
+        </Text>
+        <Text style={{ color: "#7a5c7a", marginTop: 4, fontSize: 12 }}>
+          {estimate.matchedKeywords.length > 0
+            ? `Based on: ${estimate.matchedKeywords.slice(0, 4).join(", ")}`
+            : "Default estimate - add details for a sharper guess"}
+        </Text>
       </View>
 
       {error ? (

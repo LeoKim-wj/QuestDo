@@ -32,7 +32,9 @@ type TaskDocument = {
   priority?: string;
   dueDate?: string;
   createdDate?: string;
+  completedDate?: string | null;
   reminderTime?: string;
+  estimatedMinutes?: number;
   notificationId?: string | null;
   recurrence?: string | null;
   generatedFromTaskId?: string | null;
@@ -46,7 +48,11 @@ type RewardStateDocument = {
 
 type CosmeticStateDocument = {
   unlockedCosmeticIds?: string[];
-  equippedCosmetics?: { accessory?: string | null; furColor?: string | null };
+  equippedCosmetics?: {
+    accessory?: string | null;
+    furColor?: string | null;
+    background?: string | null;
+  };
   // Legacy field — migrated to equippedCosmetics.accessory on read
   equippedCosmeticId?: string | null;
 };
@@ -148,7 +154,10 @@ function mapDocumentToTask(id: string, data: TaskDocument): Task {
     priority: normalizePriority(data.priority),
     dueDate: data.dueDate ?? new Date().toISOString(),
     createdDate: data.createdDate ?? new Date().toISOString(),
+    completedDate: data.completedDate ?? null,
     reminderTime: data.reminderTime ?? "",
+    estimatedMinutes:
+      typeof data.estimatedMinutes === "number" ? data.estimatedMinutes : 0,
     notificationId: data.notificationId ?? null,
     recurrence: normalizeRecurrence(data.recurrence),
     generatedFromTaskId: data.generatedFromTaskId ?? null,
@@ -170,7 +179,10 @@ function taskToDocument(task: Task): Required<TaskDocument> {
     priority: task.priority,
     dueDate: task.dueDate,
     createdDate,
+    completedDate: task.completedDate ?? null,
     reminderTime: task.reminderTime ?? "",
+    estimatedMinutes:
+      typeof task.estimatedMinutes === "number" ? task.estimatedMinutes : 0,
     notificationId: task.notificationId ?? null,
     recurrence: task.recurrence ?? null,
     generatedFromTaskId: task.generatedFromTaskId ?? null,
@@ -230,6 +242,7 @@ export async function completeTaskAndCreateNextTask(id: string, nextTask: Task) 
   batch.update(doc(firestore, "tasks", id), {
     completed: true,
     status: "completed",
+    completedDate: new Date().toISOString(),
     generatedNextTaskId: nextTask.id,
   });
   batch.set(doc(firestore, "tasks", nextTask.id), taskToDocument(nextTask));
@@ -250,7 +263,10 @@ export async function updateTaskRecord(id: string, updatedFields: Partial<Task>)
       ? { recurrence: updatedFields.recurrence ?? null }
       : {}),
     ...(typeof updatedFields.completed === "boolean"
-      ? { status: updatedFields.completed ? "completed" : "incomplete" }
+      ? {
+          status: updatedFields.completed ? "completed" : "incomplete",
+          completedDate: updatedFields.completed ? new Date().toISOString() : null,
+        }
       : {}),
   };
 
@@ -277,6 +293,7 @@ export async function setTaskCompleted(id: string, completed: boolean) {
   await updateDoc(doc(firestore, "tasks", id), {
     completed,
     status: completed ? "completed" : "incomplete",
+    completedDate: completed ? new Date().toISOString() : null,
   });
 }
 
