@@ -1,12 +1,12 @@
 export type TaskPriority = "high" | "medium" | "low";
 export type RecurrenceFrequency = "none" | "daily" | "weekly" | "monthly";
-
+ 
 export type Subtask = {
   id: string;
   title: string;
   completed: boolean;
 };
-
+ 
 export type Task = {
   id: string;
   title: string;
@@ -16,6 +16,7 @@ export type Task = {
   priority: TaskPriority;
   dueDate: string;
   createdDate: string;
+  completedDate?: string | null;
   reminderTime: string;
   notificationId?: string | null;
   recurrence?: Exclude<RecurrenceFrequency, "none">;
@@ -23,3 +24,4 @@ export type Task = {
   generatedNextTaskId?: string | null;
   subtasks?: Subtask[];
 };
+ 

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTasks } from "../context/TaskContext";
 import { scheduleTaskNotification } from "../services/NotificationService";
 import { breakdownGoal, DetailLevel } from "../services/geminiService";
@@ -8,7 +8,7 @@ import { Subtask, TaskPriority } from "../types/task";
 
 export default function CreateTaskScreen() {
   const router = useRouter();
-  const { addCategory, addTask, categories } = useTasks();
+  const { addCategory, addTask, categories, tasks } = useTasks();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -27,6 +27,11 @@ export default function CreateTaskScreen() {
   const [detailLevel, setDetailLevel] = useState<DetailLevel>("detailed");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState("");
+
+  // Duplicate warning state
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const [duplicateTaskTitle, setDuplicateTaskTitle] = useState("");
+  const [pendingTaskSave, setPendingTaskSave] = useState<(() => Promise<void>) | null>(null);
 
   const handleBreakdown = async () => {
     if (!title.trim()) {
@@ -53,6 +58,49 @@ export default function CreateTaskScreen() {
     setSubtasks((prev) => prev.filter((s) => s.id !== id));
   };
 
+  const checkForDuplicate = (cleanTitle: string): string | null => {
+    const match = tasks.find(
+      (task) => task.title.trim().toLowerCase() === cleanTitle.toLowerCase()
+    );
+    return match ? match.title : null;
+  };
+
+  const performSave = async () => {
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+    const cleanCategory = (customCategory.trim() || category).trim();
+    const parsedDate = new Date(dueDate);
+
+    const reminderTime =
+      reminderMode === "offset"
+        ? `offset:${offsetHours * 60 + offsetMinutes}`
+        : `${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`;
+
+    const task = {
+      id: Date.now().toString(),
+      title: cleanTitle,
+      description: cleanDescription,
+      category: cleanCategory,
+      completed: false,
+      priority,
+      dueDate: parsedDate.toISOString(),
+      createdDate: new Date().toISOString(),
+      completedDate: null,
+      reminderTime,
+      notificationId: null,
+      subtasks: subtasks.map((subtask) => ({
+        id: subtask.id,
+        title: subtask.title,
+        completed: subtask.completed,
+      })),
+    };
+
+    const notificationId = await scheduleTaskNotification(task);
+    addCategory(cleanCategory);
+    await addTask({ ...task, notificationId });
+    router.back();
+  };
+
   const saveTask = async () => {
     const cleanTitle = title.trim();
     const cleanDescription = description.trim();
@@ -72,37 +120,104 @@ export default function CreateTaskScreen() {
       return;
     }
 
-    const reminderTime =
-      reminderMode === "offset"
-        ? `offset:${offsetHours * 60 + offsetMinutes}`
-        : `${String(reminderHour).padStart(2, "0")}:${String(reminderMinute).padStart(2, "0")}`;
+    // Check for duplicate title
+    const matchedTitle = checkForDuplicate(cleanTitle);
+    if (matchedTitle) {
+      setDuplicateTaskTitle(matchedTitle);
+      setPendingTaskSave(() => performSave);
+      setShowDuplicateModal(true);
+      return;
+    }
 
-    const task = {
-      id: Date.now().toString(),
-      title: cleanTitle,
-      description: cleanDescription,
-      category: cleanCategory,
-      completed: false,
-      priority,
-      dueDate: parsedDate.toISOString(),
-      createdDate: new Date().toISOString(),
-      reminderTime,
-      notificationId: null,
-      subtasks: subtasks.map((subtask) => ({
-        id: subtask.id,
-        title: subtask.title,
-        completed: subtask.completed,
-      })),
-    };
+    await performSave();
+  };
 
-    const notificationId = await scheduleTaskNotification(task);
-    addCategory(cleanCategory);
-    await addTask({ ...task, notificationId });
-    router.back();
+  const handleDuplicateConfirm = async () => {
+    setShowDuplicateModal(false);
+    if (pendingTaskSave) {
+      await pendingTaskSave();
+      setPendingTaskSave(null);
+    }
+  };
+
+  const handleDuplicateCancel = () => {
+    setShowDuplicateModal(false);
+    setPendingTaskSave(null);
   };
 
   return (
     <ScrollView style={{ flex: 1, padding: 20, backgroundColor: "#f8f8fb" }}>
+      {/* Duplicate Warning Modal */}
+      <Modal
+        visible={showDuplicateModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleDuplicateCancel}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: "rgba(0,0,0,0.4)",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 24,
+        }}>
+          <View style={{
+            backgroundColor: "white",
+            borderRadius: 14,
+            padding: 24,
+            width: "100%",
+            maxWidth: 360,
+          }}>
+            <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 10, color: "#8a008a" }}>
+              Duplicate Task Detected
+            </Text>
+            <Text style={{ color: "#333", marginBottom: 6, fontSize: 14 }}>
+              A task with the same title already exists:
+            </Text>
+            <Text style={{
+              color: "#8a008a",
+              fontWeight: "bold",
+              fontSize: 15,
+              backgroundColor: "#f8f0f8",
+              padding: 10,
+              borderRadius: 8,
+              marginBottom: 16,
+            }}>
+              "{duplicateTaskTitle}"
+            </Text>
+            <Text style={{ color: "#555", fontSize: 13, marginBottom: 20 }}>
+              Are you sure you want to create another task with the same name?
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <Pressable
+                onPress={handleDuplicateCancel}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#e8e8ef",
+                  padding: 12,
+                  borderRadius: 8,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontWeight: "bold", color: "#333" }}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={handleDuplicateConfirm}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#8a008a",
+                  padding: 12,
+                  borderRadius: 8,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ fontWeight: "bold", color: "white" }}>Create Anyway</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <Text style={{ fontSize: 28, fontWeight: "bold", marginBottom: 16 }}>
         Add Goal
       </Text>

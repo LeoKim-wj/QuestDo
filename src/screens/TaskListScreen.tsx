@@ -1,6 +1,6 @@
-import React, { useState, useRef } from "react";
-import { View, Text, Pressable, ScrollView, Animated, TextInput } from "react-native";
 import { useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
+import { Animated, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useTasks } from "../context/TaskContext";
 import { cancelTaskNotification } from "../services/NotificationService";
 import { Task } from "../types/task";
@@ -24,8 +24,30 @@ export default function TaskListScreen() {
   const [flashingTaskId, setFlashingTaskId] = useState<string | null>(null);
   const flashOpacity = useRef(new Animated.Value(0)).current;
 
+  // Per-task error messages for action validation and rapid completion feedback
+  const [taskErrors, setTaskErrors] = useState<Record<string, string>>({});
+
+  const showTaskError = (taskId: string, message: string) => {
+    setTaskErrors((prev) => ({ ...prev, [taskId]: message }));
+    setTimeout(() => {
+      setTaskErrors((prev) => {
+        const next = { ...prev };
+        delete next[taskId];
+        return next;
+      });
+    }, 4000);
+  };
+
   const handleToggle = async (taskId: string, currentlyCompleted: boolean) => {
-    await toggleTaskCompleted(taskId);
+    const result = await toggleTaskCompleted(taskId);
+
+    if (!result.success) {
+      if (result.reason) {
+        showTaskError(taskId, result.reason);
+      }
+      return;
+    }
+
     if (!currentlyCompleted) {
       setFlashingTaskId(taskId);
       flashOpacity.setValue(1);
@@ -35,6 +57,17 @@ export default function TaskListScreen() {
         useNativeDriver: true,
       }).start(() => setFlashingTaskId(null));
     }
+  };
+
+  const handleDelete = async (taskId: string, notificationId: string | null | undefined) => {
+    const result = await deleteTask(taskId);
+
+    if (!result.success && result.reason) {
+      showTaskError(taskId, result.reason);
+      return;
+    }
+
+    await cancelTaskNotification(notificationId);
   };
 
   const priorityOrder = { low: 1, medium: 2, high: 3 };
@@ -73,22 +106,20 @@ export default function TaskListScreen() {
   });
 
   return (
-   
-
     <ScrollView style={{ flex: 1, padding: 20, backgroundColor: "#f8f8fb" }}>
       <Pressable
-  onPress={() => router.back()}
-  style={{
-    alignSelf: "flex-start",
-    backgroundColor: "#e8e8ef",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginBottom: 12,
-  }}
->
-  <Text style={{ fontWeight: "bold" }}>← Back</Text>
-</Pressable>
+        onPress={() => router.back()}
+        style={{
+          alignSelf: "flex-start",
+          backgroundColor: "#e8e8ef",
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          borderRadius: 8,
+          marginBottom: 12,
+        }}
+      >
+        <Text style={{ fontWeight: "bold" }}>← Back</Text>
+      </Pressable>
       <Text style={{ fontSize: 28, fontWeight: "bold", marginBottom: 16 }}>
         Manage Tasks
       </Text>
@@ -279,6 +310,22 @@ export default function TaskListScreen() {
             )}
           </View>
 
+          {/* Per-task error message */}
+          {taskErrors[task.id] ? (
+            <View style={{
+              backgroundColor: "#fef2f2",
+              borderRadius: 8,
+              padding: 10,
+              marginTop: 8,
+              borderWidth: 1,
+              borderColor: "#fca5a5",
+            }}>
+              <Text style={{ color: "#dc2626", fontSize: 13, fontWeight: "600" }}>
+                ⚠ {taskErrors[task.id]}
+              </Text>
+            </View>
+          ) : null}
+
           <Text style={{ marginTop: 4, color: task.completed ? "#6b7280" : "#000" }}>
             Status: {task.completed ? "Completed" : "Incomplete"}
           </Text>
@@ -390,10 +437,7 @@ export default function TaskListScreen() {
             </Pressable>
 
             <Pressable
-              onPress={async () => {
-                await cancelTaskNotification(task.notificationId);
-                await deleteTask(task.id);
-              }}
+              onPress={() => handleDelete(task.id, task.notificationId)}
               style={{
                 flex: 1,
                 backgroundColor: "#eb5757",
