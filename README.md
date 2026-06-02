@@ -1,100 +1,81 @@
-# QuestDo App 👋
-
-QuestDo is a task management mobile application built using **React Native, Expo, Firebase, and Gemini AI integration**. The app helps users create, organise, track, and manage tasks with features such as categories, reminders, recurring tasks, rewards, AI task breakdown, and progress tracking.
-
-## Features
-
-* Create, edit, and delete tasks
-* Task categories and priority levels
-* Calendar and dashboard views
-* Reminder notifications
-* Recurring tasks (Daily / Weekly / Monthly)
-* Bonus rewards / points system
-* Firebase cloud database integration
-* Multi-device task synchronisation
-* AI task breakdown using Gemini API
-* Task sorting and progress tracking
-* User Authentication
-
-## Getting Started
-
-### 1. Install dependencies
-
-```bash
-npm install
-```
-
-### 2. Create a `.env` file
-
-Copy the following template into a `.env` file and add your own keys.
-
-```env
-# Firebase Configuration
-
-EXPO_PUBLIC_FIREBASE_API_KEY=your-api-key
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
-EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
-
-# Gemini AI API Key
-
-EXPO_PUBLIC_GEMINI_API_KEY=your-gemini-api-key
-```
-
-### 3. Start the app
-
-```bash
-npx expo start
-```
-
 ## Team Contributions
 
-### Leo Kim
+### Project Roles
 
-* Scrum Master responsibilities
-* Sprint tracking, Trello management, GitHub review
-* Task editing and task categorisation
-* Firebase database integration
-* AI task breakdown support
-* Recurring task functionality
-* Merge conflict resolution and testing support
+* **Leo Kim** - Scrum Master, sprint tracking, Trello management, GitHub review, merge conflict support, and team coordination.
+* **Georgia Rouse** - Product Owner, feature planning support, testing support, and documentation support.
 
-### Georgia Rouse
+### Sprint 1 Contributions
 
-*Product Owner responsibilities
-* Calendar implementation
-* Delete task functionality
-* UI / cosmetic improvements
-* User Authentication
-* Task Point System
-* Comsetic Unlock
-* Documentation support
+#### Leo Kim
 
-### Ben Samountry
+* Implemented task categorisation feature.
+* Implemented task editing functionality.
+* Helped manage sprint progress as Scrum Master.
+* Tested related task management features.
 
-* Task creation and completion functionality
-* Multi-device task tracking
-* Firebase-related feature contribution
-* Testing and integration support
+#### Georgia Rouse
 
-### Johnny Tsang
+* Implemented calendar view for tasks.
+* Implemented delete task functionality.
+* Supported UI and task management testing.
 
-* Notification and reminder features
-* Task duration estimation
-* Application integration support
-* Login Page
-* Search Function
+#### Ben Samountry
 
-### Tanvir Singh
+* Implemented task creation functionality.
+* Implemented task completion/check-off functionality.
+* Worked on multi-device task tracking support.
+* Supported Firebase-related task tracking features.
 
-* Dashboard implementation
-* Task sorting functionality
-* Progress tracking support
-* Testing contribution
-* App Navigation
+#### Johnny Tsang
 
-## Project Overview
+* Implemented notification/reminder functionality for unfinished tasks.
+* Worked on task tracking support for students with poor time management.
+* Supported app integration and testing.
 
-QuestDo was developed as part of **COMP602 Software Development Practice** using Agile Scrum methodology. The project focused on collaborative development, sprint planning, user stories, GitHub workflow, testing, database integration, and feature delivery across multiple sprints.
+#### Tanvir Singh
+
+* Implemented task sorting by priority and due date.
+* Implemented dashboard view for today's tasks.
+* Supported testing for dashboard and sorting features.
+
+### Sprint 2 Contributions
+
+#### Leo Kim
+
+* Configured database support for persistent task storage.
+* Implemented saving newly created tasks to the database.
+* Implemented loading saved tasks from the database when the app starts.
+* Worked on bonus rewards for consistent task completion.
+* Worked on personal progress statistics.
+* Continued Scrum Master responsibilities, Trello tracking, and GitHub integration support.
+
+#### Georgia Rouse
+
+* Implemented Firebase authentication support.
+* Worked on user login/authentication functionality.
+* Implemented task points reward feature.
+* Implemented cosmetic unlock rewards.
+* Implemented reminder support before task deadlines.
+* Supported testing for Sprint 2 features.
+
+#### Ben Samountry
+
+* Implemented task migration for moving incomplete tasks to future dates.
+* Implemented task abuse prevention safeguards.
+* Supported integration and testing for task-related features.
+
+#### Johnny Tsang
+
+* Implemented task duration estimation.
+* Implemented task search by keyword.
+* Implemented recurring task functionality.
+* Implemented login screen with email and password fields.
+* Supported application integration and testing.
+
+#### Tanvir Singh
+
+* Implemented app navigation between screens.
+* Implemented weekly, monthly, and semester task summary view.
+* Implemented streak counter for daily task completion.
+* Supported testing for navigation and progress-related features.
