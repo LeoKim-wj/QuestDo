@@ -1,43 +1,92 @@
 # QuestDo App 👋
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+QuestDo is a task management mobile application built using **React Native, Expo, Firebase, and Gemini AI integration**. The app helps users create, organise, track, and manage tasks with features such as categories, reminders, recurring tasks, rewards, AI task breakdown, and progress tracking.
 
-## Get started
+## Features
 
-1. Install dependencies
+* Create, edit, and delete tasks
+* Task categories and priority levels
+* Calendar and dashboard views
+* Reminder notifications
+* Recurring tasks (Daily / Weekly / Monthly)
+* Bonus rewards / points system
+* Firebase cloud database integration
+* Multi-device task synchronisation
+* AI task breakdown using Gemini API
+* Task sorting and progress tracking
 
-   ```bash
-   npm install
-   ```
+## Getting Started
 
-2. Start the app
+### 1. Install dependencies
 
-   ```bash
-   npx expo start
-   ```
+```bash
+npm install
+```
+
+### 2. Create a `.env` file
+
+Copy the following template into a `.env` file and add your own keys.
+
+```env
+# Firebase Configuration
+
+EXPO_PUBLIC_FIREBASE_API_KEY=your-api-key
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
+EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
+
+# Gemini AI API Key
+
+EXPO_PUBLIC_GEMINI_API_KEY=your-gemini-api-key
+```
+
+### 3. Start the app
+
+```bash
+npx expo start
+```
 
 ## Team Contributions
 
-**Leo Kim**
-- Implemented task editing functionality
-- Developed task categorisation system
+### Leo Kim
 
-**Georgia Rouse**
-- Implemented calendar view
-- Developed delete task functionality
+* Scrum Master responsibilities
+* Sprint tracking, Trello management, GitHub review
+* Task editing and task categorisation
+* Firebase database integration
+* AI task breakdown support
+* Recurring task functionality
+* Merge conflict resolution and testing support
 
-**Ben Samountry**
-- Implemented task creation and completion feature
-- Developed multi-device task tracking functionality
+### Georgia Rouse
 
-**Johnny Tsang**
-- Implemented notification feature
-- Contributed to overall application integration
+* Calendar implementation
+* Delete task functionality
+* UI / cosmetic improvements
+* Documentation support
 
-**Tanvir Singh**
-- Developed dashboard for today's tasks
-- Implemented task sorting functionality
+### Ben Samountry
+
+* Task creation and completion functionality
+* Multi-device task tracking
+* Firebase-related feature contribution
+* Testing and integration support
+
+### Johnny Tsang
+
+* Notification and reminder features
+* Task duration estimation
+* Application integration support
+
+### Tanvir Singh
+
+* Dashboard implementation
+* Task sorting functionality
+* Progress tracking support
+* Testing contribution
 
 ## Project Overview
 
-QuestDo is a task management mobile application built using React Native and Expo. The app allows users to create, edit, categorise, and track tasks, as well as receive notifications for unfinished tasks.
+QuestDo was developed as part of **COMP602 Software Development Practice** using Agile Scrum methodology. The project focused on collaborative development, sprint planning, user stories, GitHub workflow, testing, database integration, and feature delivery across multiple sprints.
