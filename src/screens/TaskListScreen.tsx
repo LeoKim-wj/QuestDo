@@ -24,6 +24,12 @@ export default function TaskListScreen() {
   const [flashingTaskId, setFlashingTaskId] = useState<string | null>(null);
   const flashOpacity = useRef(new Animated.Value(0)).current;
 
+  // Migrate feature state
+  const [migrateOpenId, setMigrateOpenId] = useState<string | null>(null);
+  const [migrateFlashId, setMigrateFlashId] = useState<string | null>(null);
+  const [migrateFlashText, setMigrateFlashText] = useState("");
+  const migrateFlashOpacity = useRef(new Animated.Value(0)).current;
+
   // Per-task error messages for action validation and rapid completion feedback
   const [taskErrors, setTaskErrors] = useState<Record<string, string>>({});
 
@@ -68,6 +74,25 @@ export default function TaskListScreen() {
     }
 
     await cancelTaskNotification(notificationId);
+  };
+
+  const handleMigrate = async (task: Task, days: number) => {
+    const base = task.dueDate ? new Date(task.dueDate) : new Date();
+    base.setDate(base.getDate() + days);
+    const newDueDate = base.toISOString();
+
+    await updateTask(task.id, { dueDate: newDueDate });
+
+    const label = base.toLocaleDateString("en-NZ");
+    setMigrateFlashText(`Moved to ${label}`);
+    setMigrateFlashId(task.id);
+    setMigrateOpenId(null);
+    migrateFlashOpacity.setValue(1);
+    Animated.timing(migrateFlashOpacity, {
+      toValue: 0,
+      duration: 2000,
+      useNativeDriver: true,
+    }).start(() => setMigrateFlashId(null));
   };
 
   const priorityOrder = { low: 1, medium: 2, high: 3 };
@@ -308,6 +333,19 @@ export default function TaskListScreen() {
                 +5 pts
               </Text>
             )}
+            {migrateFlashId === task.id && (
+              <Animated.Text
+                style={{
+                  opacity: migrateFlashOpacity,
+                  color: "#8a008a",
+                  fontWeight: "bold",
+                  fontSize: 13,
+                  marginLeft: 8,
+                }}
+              >
+                {migrateFlashText}
+              </Animated.Text>
+            )}
           </View>
 
           {/* Per-task error message */}
@@ -353,6 +391,47 @@ export default function TaskListScreen() {
               ? new Date(task.dueDate).toLocaleDateString("en-NZ")
               : "Not set"}
           </Text>
+
+          {migrateOpenId === task.id && (
+            <View style={{
+              marginTop: 10,
+              backgroundColor: "#f5f0ff",
+              borderRadius: 8,
+              padding: 10,
+              borderWidth: 1,
+              borderColor: "#c4b5fd",
+            }}>
+              <Text style={{ color: "#6b21a8", fontWeight: "bold", fontSize: 13, marginBottom: 8 }}>
+                Migrate to:
+              </Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <Pressable
+                  onPress={() => handleMigrate(task, 1)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#8a008a",
+                    padding: 10,
+                    borderRadius: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold", fontSize: 13 }}>Tomorrow</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => handleMigrate(task, 7)}
+                  style={{
+                    flex: 1,
+                    backgroundColor: "#8a008a",
+                    padding: 10,
+                    borderRadius: 8,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "white", fontWeight: "bold", fontSize: 13 }}>Next Week</Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
 
           {task.subtasks && task.subtasks.length > 0 && (
             <View style={{ marginTop: 10 }}>
@@ -449,6 +528,25 @@ export default function TaskListScreen() {
               <Text style={{ color: "white" }}>Delete</Text>
             </Pressable>
           </View>
+
+          {!task.completed && (
+            <Pressable
+              onPress={() => setMigrateOpenId(migrateOpenId === task.id ? null : task.id)}
+              style={{
+                marginTop: 8,
+                backgroundColor: migrateOpenId === task.id ? "#e9d5ff" : "#f5f0ff",
+                padding: 10,
+                borderRadius: 8,
+                alignItems: "center",
+                borderWidth: 1,
+                borderColor: "#c4b5fd",
+              }}
+            >
+              <Text style={{ color: "#6b21a8", fontWeight: "bold", fontSize: 13 }}>
+                {migrateOpenId === task.id ? "✕ Cancel Migrate" : "📅 Migrate"}
+              </Text>
+            </Pressable>
+          )}
         </View>
       ))}
     </ScrollView>
