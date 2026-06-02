@@ -52,7 +52,6 @@ export default function HomeScreen() {
     .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
     .slice(0, 3);
 
-  const completedTodayCount = todaysTasks.filter((task) => task.completed).length;
   const completedTaskCount = tasks.filter((task) => task.completed).length;
 
   return (

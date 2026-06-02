@@ -165,22 +165,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   }, [totalPoints, unlockedCosmeticIds]);
 
   const addTask = async (task: Task, force = false): Promise<TaskActionResult> => {
-    console.log("=== addTask called ===");
-    console.log("force:", force);
-    console.log("tasksRef.current count:", tasksRef.current.length);
-    console.log("tasksRef titles:", tasksRef.current.map(t => t.title));
-    console.log("new task title:", task.title);
-
     if (!force) {
       const isDuplicate = tasksRef.current.some(
         (existing) =>
           existing.title.trim().toLowerCase() === task.title.trim().toLowerCase()
       );
 
-      console.log("isDuplicate:", isDuplicate);
-
       if (isDuplicate) {
-        console.log("Returning duplicate result");
         return {
           success: false,
           reason: "duplicate",
