@@ -14,6 +14,7 @@ QuestDo is a task management mobile application built using **React Native, Expo
 * Multi-device task synchronisation
 * AI task breakdown using Gemini API
 * Task sorting and progress tracking
+* User Authentication
 
 ## Getting Started
 
