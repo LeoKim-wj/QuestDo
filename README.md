@@ -15,8 +15,13 @@ QuestDo is a task management mobile application built using **React Native, Expo
 * AI task breakdown using Gemini API
 * Task sorting and progress tracking
 * User authentication
-
----
+* Task search
+* Streak counter
+* Cosmetic unlock rewards
+* Personal progress statistics
+* Task duration estimation
+* Task migration for incomplete tasks
+* Task abuse prevention safeguards
 
 ## Getting Started
 
@@ -47,20 +52,91 @@ EXPO_PUBLIC_GEMINI_API_KEY=your-gemini-api-key
 
 ### 3. Start the app
 
+For local web testing:
+
 ```bash
-npx expo start
+npx expo start --clear
 ```
 
----
+For Expo web mode:
+
+```bash
+npm run web -- --clear
+```
+
+For mobile testing with Expo Go:
+
+```bash
+npx expo start --tunnel --clear
+```
+
+If Expo asks to install `@expo/ngrok`, enter `y`.
+
+## Running on Mobile with Expo Go
+
+If the project is opened in **GitHub Codespaces**, the normal Expo QR code may show a **request timed out** error on mobile. This happens because the phone cannot always connect directly to the Codespaces development server through the normal LAN QR code.
+
+Use tunnel mode instead:
+
+```bash
+npx expo start --tunnel --clear
+```
+
+Then scan the new QR code with Expo Go.
+
+If it still times out:
+
+```bash
+npm install @expo/ngrok
+npx expo start --tunnel --clear
+```
+
+Other things to try:
+
+* Close Expo Go completely and reopen it.
+* Stop the Expo server with `Ctrl + C`, then restart it.
+* Scan the new tunnel QR code, not an old QR code.
+* Turn off VPN if it is enabled.
+* Try mobile data instead of school or public Wi-Fi.
+* If the port is busy, try:
+
+```bash
+npx expo start --tunnel --clear --port 8082
+```
+
+## Updating to the Latest Release Branch
+
+Before running the final version, make sure the local branch is updated.
+
+```bash
+git fetch origin
+git checkout Release
+git pull origin Release
+npm install
+npx expo start --tunnel --clear
+```
+
+If local files block the pull:
+
+```bash
+git stash push -u -m "temp before updating Release"
+git pull origin Release
+npm install
+npx expo start --tunnel --clear
+```
+
+To confirm the latest Release branch is being used:
+
+```bash
+git log --oneline -1
+```
 
 ## Team Contributions
 
 ### Project Roles
 
-* **Leo Kim** – Scrum Master, sprint tracking, Trello management, GitHub review, merge conflict support, and team coordination.
-* **Georgia Rouse** – Product Owner, backlog planning, testing support, and documentation coordination.
-
----
+* **Leo Kim** - Scrum Master, sprint tracking, Trello management, GitHub review, merge conflict support, and team coordination.
+* **Georgia Rouse** - Product Owner, backlog planning, testing support, and documentation coordination.
 
 ### Sprint 1 Contributions
 
@@ -93,8 +169,6 @@ npx expo start
 * Implemented task sorting by priority and due date.
 * Implemented dashboard view for today's tasks.
 * Supported testing for dashboard and sorting features.
-
----
 
 ### Sprint 2 Contributions
 
@@ -134,8 +208,6 @@ npx expo start
 * Implemented weekly, monthly, and semester task summary view.
 * Implemented streak counter for daily task completion.
 * Supported testing for navigation and progress-related features.
-
----
 
 ## Project Overview
 
