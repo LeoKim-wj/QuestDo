@@ -1,0 +1,329 @@
+import { useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+    ActivityIndicator,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TextStyle,
+    TouchableOpacity,
+    View,
+    ViewStyle,
+} from 'react-native';
+import { useAuth } from '../src/context/AuthContext';
+import { Fonts } from '../constants/theme';
+
+function getFirebaseAuthError(code: string): string {
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/user-not-found':
+    case 'auth/wrong-password':
+      return 'Invalid email or password. Please try again.';
+    case 'auth/invalid-email':
+      return 'Please enter a valid email address.';
+    case 'auth/missing-password':
+      return 'Password is required.';
+    case 'auth/too-many-requests':
+      return 'Too many failed attempts. Please try again later.';
+    case 'auth/network-request-failed':
+      return 'Network error. Please check your connection.';
+    default:
+      return 'Authentication failed. Please try again.';
+  }
+}
+
+export default function LoginScreen() {
+  const router = useRouter();
+  const { signIn } = useAuth();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [authError, setAuthError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const activeFont = (Fonts as any)?.[Platform.OS]?.sans || 'normal';
+
+  const handleLogin = async () => {
+    let isValid = true;
+    setEmailError('');
+    setPasswordError('');
+    setAuthError('');
+
+    if (!email.trim()) {
+      setEmailError('*Email is required.*');
+      isValid = false;
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      setEmailError('*Please enter a valid email address.*');
+      isValid = false;
+    }
+
+    if (!password) {
+      setPasswordError('*Password is required.*');
+      isValid = false;
+    }
+
+    if (!isValid) return;
+
+    setLoading(true);
+    try {
+      await signIn(email, password);
+      router.replace('/(tabs)');
+    } catch (error: any) {
+      setAuthError(getFirebaseAuthError(error?.code ?? ''));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      style={styles.container}
+    >
+      <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <View style={styles.headerContainer}>
+          <Text style={[styles.brandText, { fontFamily: activeFont }]}>QuestDo</Text>
+          <Text style={[styles.subtitleText, { fontFamily: activeFont }]}>Login</Text>
+        </View>
+
+        <View style={styles.card}>
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { fontFamily: activeFont }]}>Email</Text>
+            <TextInput
+              style={[styles.input, emailError ? styles.inputInvalid : null]}
+              placeholder="youremail@example.com"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (emailError) setEmailError('');
+              }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {emailError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{emailError}</Text> : null}
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { fontFamily: activeFont }]}>Password</Text>
+            <TextInput
+              style={[styles.input, passwordError ? styles.inputInvalid : null]}
+              placeholder="••••"
+              placeholderTextColor="#999"
+              value={password}
+              onChangeText={(text) => {
+                setPassword(text);
+                if (passwordError) setPasswordError('');
+              }}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {passwordError ? <Text style={[styles.errorText, { fontFamily: activeFont }]}>{passwordError}</Text> : null}
+          </View>
+
+          {authError ? (
+            <Text style={[styles.authErrorText, { fontFamily: activeFont }]}>{authError}</Text>
+          ) : null}
+
+          <TouchableOpacity
+            style={styles.forgotContainer}
+            activeOpacity={0.7}
+            onPress={() => router.push('/forgot-password')}
+          >
+            <Text style={[styles.forgotText, { fontFamily: activeFont }]}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            onPress={handleLogin}
+            activeOpacity={0.8}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={[styles.loginButtonText, { fontFamily: activeFont }]}>Login</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity
+          style={styles.signUpContainer}
+          activeOpacity={0.7}
+          onPress={() => router.push('/signup')}
+        >
+          <Text style={[styles.signUpText, { fontFamily: activeFont }]}>
+            Don&apos;t have an account? <Text style={styles.signUpHighlight}>Sign Up</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.footer}>
+          <Text style={[styles.footerText, { fontFamily: activeFont }]}>QuestDo | Terms | Privacy</Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+
+const BRAND_PURPLE = '#8b008b';
+
+interface Styles {
+  container: ViewStyle;
+  scrollContainer: ViewStyle;
+  headerContainer: ViewStyle;
+  brandText: TextStyle;
+  subtitleText: TextStyle;
+  card: ViewStyle;
+  inputGroup: ViewStyle;
+  label: TextStyle;
+  input: TextStyle;
+  inputInvalid: TextStyle;
+  errorText: TextStyle;
+  authErrorText: TextStyle;
+  forgotContainer: ViewStyle;
+  forgotText: TextStyle;
+  loginButton: ViewStyle;
+  loginButtonDisabled: ViewStyle;
+  loginButtonText: TextStyle;
+  signUpContainer: ViewStyle;
+  signUpText: TextStyle;
+  signUpHighlight: TextStyle;
+  footer: ViewStyle;
+  footerText: TextStyle;
+}
+
+const styles = StyleSheet.create<Styles>({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 40,
+    alignItems: Platform.OS === 'web' ? 'center' : 'stretch',
+  },
+  headerContainer: {
+    alignSelf: 'flex-start',
+    width: Platform.OS === 'web' ? 420 : '100%',
+    marginBottom: 32,
+  },
+  brandText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: BRAND_PURPLE,
+  },
+  subtitleText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#11181C',
+    marginTop: 20,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#e1e4e6',
+    width: Platform.OS === 'web' ? 420 : '100%',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#11181C',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: '#f5f5f5',
+    borderWidth: 1,
+    borderColor: '#e1e4e6',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: Platform.OS === 'web' ? 12 : 14,
+    fontSize: 15,
+    color: '#11181C',
+  },
+  inputInvalid: {
+    borderColor: '#cc0000',
+    backgroundColor: '#fff8f8',
+  },
+  errorText: {
+    color: '#cc0000',
+    fontSize: 13,
+    marginTop: 6,
+  },
+  authErrorText: {
+    color: '#cc0000',
+    fontSize: 13,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  forgotContainer: {
+    alignSelf: 'flex-start',
+    marginBottom: 24,
+  },
+  forgotText: {
+    color: BRAND_PURPLE,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  loginButton: {
+    backgroundColor: BRAND_PURPLE,
+    borderRadius: 100,
+    paddingVertical: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loginButtonDisabled: {
+    opacity: 0.6,
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  signUpContainer: {
+    marginTop: 24,
+    alignItems: 'center',
+  },
+  signUpText: {
+    fontSize: 14,
+    color: '#555',
+  },
+  signUpHighlight: {
+    color: BRAND_PURPLE,
+    fontWeight: '600',
+  },
+  footer: {
+    marginTop: 60,
+    alignItems: 'center',
+    width: Platform.OS === 'web' ? 420 : '100%',
+  },
+  footerText: {
+    fontSize: 12,
+    color: '#888',
+  },
+});
