@@ -1,64 +1,51 @@
 # QuestDo App 👋
 
-QuestDo is a task management mobile application built with **React Native, Expo, Firebase, and Gemini AI**.
+QuestDo is a task management mobile application built using **React Native, Expo, Firebase, and Gemini AI integration**. The app helps users create, organise, track, and manage tasks with features such as categories, reminders, recurring tasks, rewards, AI task breakdown, and progress tracking.
 
-The app allows users to:
+## Features
 
 * Create, edit, and delete tasks
-* Categorise and sort tasks
-* Set repeating tasks (Daily / Weekly / Monthly)
-* Receive notifications and reminders
-* View dashboard progress and reward points
-* Securely authenticate with Firebase
-* Use AI task breakdown for large goals
+* Task categories and priority levels
+* Calendar and dashboard views
+* Reminder notifications
+* Recurring tasks (Daily / Weekly / Monthly)
+* Bonus rewards / points system
+* Firebase cloud database integration
+* Multi-device task synchronisation
+* AI task breakdown using Gemini API
+* Task sorting and progress tracking
+* User authentication
 
 ---
 
-# Installation & Setup
+## Getting Started
 
-## 1. Install dependencies
+### 1. Install dependencies
 
 ```bash
 npm install
 ```
 
-## 2. Create `.env`
+### 2. Create a `.env` file
 
-Create a `.env` file in the project root.
-
-Copy the following template:
+Create a `.env` file in the project root and copy the following template.
 
 ```env
+# Firebase Configuration
+
 EXPO_PUBLIC_FIREBASE_API_KEY=your-api-key
 EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 EXPO_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
 EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 EXPO_PUBLIC_FIREBASE_APP_ID=your-app-id
+
+# Gemini AI API Key
 
 EXPO_PUBLIC_GEMINI_API_KEY=your-gemini-api-key
 ```
 
-### Firebase Setup
-
-Find these values in:
-
-```text
-Firebase Console
-→ Project Settings
-→ Your Apps
-→ Web App
-```
-
-### Gemini Setup
-
-Get a free Gemini API key:
-
-https://aistudio.google.com/app/apikey
-
----
-
-## 3. Start the application
+### 3. Start the app
 
 ```bash
 npx expo start
@@ -66,113 +53,99 @@ npx expo start
 
 ---
 
-# Test Login Account
+## Team Contributions
 
-For testing Firebase authentication:
+### Project Roles
 
-```text
-Username: [ADD TEAM TEST EMAIL HERE]
-Password: [ADD TEAM TEST PASSWORD HERE]
-```
-
-Do NOT commit personal credentials.
+* **Leo Kim** – Scrum Master, sprint tracking, Trello management, GitHub review, merge conflict support, and team coordination.
+* **Georgia Rouse** – Product Owner, backlog planning, testing support, and documentation coordination.
 
 ---
 
-# Features
+### Sprint 1 Contributions
 
-### Task Management
+#### Leo Kim
 
-* Create tasks
-* Edit tasks
-* Delete tasks
-* Categorise tasks
-* Priority system
-* Sorting & filtering
+* Implemented task categorisation feature.
+* Implemented task editing functionality.
+* Managed sprint progress as Scrum Master.
+* Supported testing and GitHub integration.
 
-### Repeating Tasks
+#### Georgia Rouse
 
-Supports:
+* Implemented calendar view for tasks.
+* Implemented delete task functionality.
+* Supported UI improvements, backlog planning, and testing as Product Owner.
 
-* Daily
-* Weekly
-* Monthly
+#### Ben Samountry
 
-Completing a repeating task automatically generates the next task instance.
+* Implemented task creation functionality.
+* Implemented task completion/check-off functionality.
+* Worked on multi-device task tracking support.
 
-### Firebase Authentication
+#### Johnny Tsang
 
-* Login
-* Sign Up
-* Password Reset
-* Protected routes
+* Implemented notification and reminder functionality.
+* Supported application integration and testing.
 
-### AI Task Breakdown
+#### Tanvir Singh
 
-Break large goals into smaller subtasks using Gemini AI.
-
-### Dashboard & Rewards
-
-* Daily streak tracking
-* Point system
-* Bonus rewards
+* Implemented task sorting by priority and due date.
+* Implemented dashboard view for today's tasks.
+* Supported testing for dashboard and sorting features.
 
 ---
 
-# Team Contributions
+### Sprint 2 Contributions
 
-### Leo Kim
+#### Leo Kim
 
-* Task editing functionality
-* Task categorisation system
-* Firebase authentication integration
-* AI breakdown integration
-* Repeating task implementation
+* Configured Firebase database support for persistent task storage.
+* Implemented saving and loading tasks using the database.
+* Worked on bonus rewards and personal progress features.
+* Continued Scrum Master responsibilities, Trello tracking, GitHub review, and merge support.
 
-### Georgia Rouse
+#### Georgia Rouse
 
-* Calendar view
-* Delete task functionality
-* Points system contribution
+* Product Owner responsibilities and sprint planning support.
+* Implemented Firebase authentication support.
+* Worked on user authentication functionality.
+* Implemented task points reward feature.
+* Implemented cosmetic unlock rewards.
+* Supported testing and documentation for Sprint 2 features.
 
-### Ben Samountry
+#### Ben Samountry
 
-* Task creation & completion
-* Multi-device task tracking
+* Implemented task migration for incomplete tasks.
+* Implemented task abuse prevention safeguards.
+* Supported feature integration and testing.
 
-### Johnny Tsang
+#### Johnny Tsang
 
-* Notification feature
-* Application integration
+* Implemented task duration estimation.
+* Implemented task search by keyword.
+* Implemented recurring task functionality.
+* Implemented login screen with email and password fields.
+* Supported application integration and testing.
 
-### Tanvir Singh
+#### Tanvir Singh
 
-* Dashboard
-* Task sorting
-
----
-
-# Tech Stack
-
-* React Native
-* Expo
-* Firebase Authentication
-* Firebase Firestore
-* Gemini AI API
+* Implemented app navigation between screens.
+* Implemented weekly, monthly, and semester task summary view.
+* Implemented streak counter for daily task completion.
+* Supported testing for navigation and progress-related features.
 
 ---
 
-# Notes
+## Project Overview
 
-Do not commit:
+QuestDo was developed as part of **COMP602 Software Development Practice** using **Agile Scrum methodology**.
 
-```text
-.env
-node_modules
-```
+The project focused on:
 
-Only commit:
-
-```text
-.env.example
-```
+* Sprint planning and Agile development
+* User stories and backlog management
+* GitHub collaboration and pull requests
+* Testing and integration across multiple features
+* Database and authentication integration
+* Team collaboration across multiple sprints
